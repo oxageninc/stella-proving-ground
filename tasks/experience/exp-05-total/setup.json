@@ -1,0 +1,7 @@
+{
+  "accounts": {
+    "alice": 10000,
+    "bob": 2500
+  },
+  "journal": []
+}
