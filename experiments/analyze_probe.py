@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from proving_ground.stats import bootstrap_ci  # noqa: E402
 
 ARMS = ("control", "oracle", "diluted", "noise")
-ROOT = Path("results/precision-probe/results.jsonl")
+ROOT = Path(sys.argv[1] if len(sys.argv) > 1 else "results/precision-probe") / "results.jsonl"
 
 
 def load() -> list[dict]:
