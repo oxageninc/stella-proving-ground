@@ -106,6 +106,42 @@ Any of those is a publishable result and will be published.
   raising a warning.
 - **Publish losses.** Raw results are committed whatever they say.
 
+## Amendment 1 — leakage-gate definition (recorded after E2 of the first attempt)
+
+The first attempt at series 001 was **aborted by its own leakage gate at epoch
+2**, and the hit was a false positive. This section records the change and why
+it is not a result being laundered.
+
+The gate flagged the 4-gram `"from bob to alice"` in a stored tool call. Every
+word in it — `from`, `to`, and both account names — is shared vocabulary
+present in the corpus and in every task. It reached the store because an agent
+working the **rename** experience task improvised
+`rename --from bob --to alice`, while `eval-06-merge`'s prompt happens to read
+`merge --from bob --to alice`. No evaluation content was involved.
+
+The signature derivation now additionally requires an n-gram to contain at
+least one word that is itself absent from the benign vocabulary — a genuinely
+evaluation-only word such as `refunded`, `swept`, `merged` or `credited`.
+
+Three things keep this honest:
+
+1. **The justification is mechanical, not statistical.** The hit was traced to
+   a specific experience task producing the sequence; it was not reclassified
+   because the epoch was inconvenient.
+2. **The gate is still controlled, and the controls are unchanged.** It still
+   fires on a leaked prompt and on a single distinctive output line
+   (`test_gate_fires_on_a_single_distinctive_string`). The signature shrank
+   from 243 to 207 n-grams; it was not gutted.
+3. **The affected series was discarded and re-run from scratch**, not
+   re-scored under the new rule. No trial that ran under the old gate
+   contributes to any published number.
+
+The general point is worth stating, because a hard gate has two failure modes
+and only one of them is obvious: a gate that misses leakage invalidates the
+result silently, and a gate that cries wolf gets switched off by whoever is
+tired of re-running. Both are fatal; the second is the one that looks
+responsible right up until someone disables it.
+
 ## Pinned configuration
 
 A change to any of these forks a new series; `assert_series_compatible` raises

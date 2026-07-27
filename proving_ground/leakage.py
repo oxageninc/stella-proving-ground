@@ -56,13 +56,54 @@ def benign_ngrams() -> set[str]:
     return benign
 
 
+def benign_tokens() -> set[str]:
+    """Individual words the agent may legitimately have seen."""
+    tokens: set[str] = set()
+    for path in sorted(CORPUS.rglob("*")):
+        if path.is_file() and path.suffix in {".py", ".md", ".json", ""}:
+            try:
+                tokens |= set(_normalize(path.read_text()))
+            except UnicodeDecodeError:
+                continue
+    for task in load_pool("experience"):
+        tokens |= set(_normalize(task.prompt))
+    return tokens
+
+
 def eval_signature() -> dict[str, set[str]]:
-    """Per-eval-task n-grams that occur nowhere the agent is allowed to look."""
-    benign = benign_ngrams()
+    """Per-eval-task n-grams that occur nowhere the agent is allowed to look.
+
+    Two filters, and the second one was added after the first produced a false
+    positive on live data.
+
+    An n-gram qualifies only if (a) it appears in no experience prompt and
+    nowhere in the corpus, **and** (b) at least one of its words is itself
+    absent from that benign vocabulary.
+
+    Filter (b) exists because (a) alone flagged `"from bob to alice"`. Every
+    word there — `from`, `to`, and both account names — is shared vocabulary
+    present in every task; the sequence appeared in the store because an agent
+    working the *rename* experience task improvised
+    `rename --from bob --to alice`, while `eval-06-merge`'s prompt happens to
+    contain `merge --from bob --to alice`. Nothing leaked. A gate that
+    invalidates good epochs on coincidence is not merely noisy: a hard gate
+    that cries wolf is one someone eventually switches off.
+
+    Requiring a genuinely eval-only word (`refunded`, `swept`, `merged`,
+    `credited`) keeps the gate able to fire on real leakage — including a
+    single remembered output line — while ignoring sequences the agent could
+    assemble from vocabulary it legitimately has.
+    """
+    benign_grams = benign_ngrams()
+    benign_words = benign_tokens()
     signature: dict[str, set[str]] = {}
     for task in load_pool("evaluation"):
-        unique = _ngrams(task.prompt) - benign
-        signature[task.task_id] = unique
+        candidates = _ngrams(task.prompt) - benign_grams
+        signature[task.task_id] = {
+            gram
+            for gram in candidates
+            if any(word not in benign_words for word in _normalize(gram))
+        }
     return signature
 
 
