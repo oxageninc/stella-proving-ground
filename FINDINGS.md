@@ -378,3 +378,95 @@ So an agent learns nothing from work it gets right. An experience pool composed
 of tasks the agent reliably solves transfers nothing, however large it is —
 which means experience-pool difficulty is a first-class experimental parameter,
 not an incidental one.
+
+---
+
+## 10. Perfectly-delivered conventions did not help — and the "noise" did
+
+The ceiling probe (`experiments/precision_probe.py`) hands the agent context in
+the prompt, bypassing the lifecycle entirely — no store, no recall, no ranking.
+It exists to separate *"the facts never arrive"* from *"the facts would not help
+if they did"*. Three arms differing only in the block appended to the prompt,
+144 trials, one pool digest (`f8a7dfe7`), one binary (0.5.60), $1.86:
+
+| arm | task pass | check rate | model calls | stuck-loop aborts |
+|---|---|---|---|---|
+| control (nothing appended) | 0.792 | 0.950 | 51.5 | 8 |
+| oracle (the 4 house conventions) | 0.688 | 0.926 | 36.6 | 4 |
+| diluted (same 4 + 8 mined process notes) | **0.896** | **0.979** | 40.4 | **0** |
+
+Paired over 12 tasks, bootstrap 95% CI:
+
+```
+oracle  - control   task pass  -0.104  [-0.208, +0.000]   —
+diluted - oracle    task pass  +0.208  [+0.083, +0.354]   excludes 0
+diluted - control   task pass  +0.104  [-0.021, +0.229]   —
+```
+
+Both hypotheses the probe was built to choose between are wrong. Perfect facts
+did not help; and the mined process memories — the exact output dismissed in
+this repo as "8 of 10 were agent self-critique, 0 captured a convention" — were
+the arm that worked.
+
+Two mechanisms are visible in the failures, and both are categorical rather than
+marginal.
+
+**The injected convention was over-applied.** Three trials failed with
+`error: missing required argument: …` — on `--amount` for `interest` and
+`sweep`, and `--journal` for `reconcile`. All three are in the oracle arm; there
+are **zero** such failures in the 96 control and diluted trials. The fourth
+oracle fact says handlers must call `validate.require(args, "field")` before
+indexing. The agent applied it to arguments the task never specified — `sweep`
+moves an entire balance, so there is no `--amount` to require — and turned a
+correct implementation into a hard failure. Stating a convention perfectly is
+not free: it is also an instruction to enforce it, including where it does not
+belong.
+
+**The process notes stopped the flailing.** Stuck-loop aborts run control 8,
+oracle 4, diluted 0. Three of the eight "noise" memories are about exactly that
+("when encountering a loop… pivot to a fundamentally different strategy"). The
+dominant failure mode on this pool is not getting a convention wrong; it is
+looping until the step cap. Context that addresses looping helps; context that
+restates conventions the agent already follows does not.
+
+That is also why oracle looks *worse* than control on completed runs alone
+(0.714 vs 0.865): it is not noise, it is the over-application above.
+
+### What this does to the roadmap
+
+The premise behind anchoring recall to files and symbols was that better
+retrieval precision would deliver the right conventions at the right moment.
+This probe says the conventions were never the bottleneck **on this pool**, so
+better delivery of them buys nothing here. That is an argument about
+prioritization, not about the graph index being wrong.
+
+### Limits, which are severe
+
+- **Ceiling.** Control already scores 0.950 on checks, with 5 of 12 tasks at a
+  clean 1.00. There is very little room to improve, and a probe with no headroom
+  cannot see a positive effect even where one exists.
+- **One check does nearly all the work.** Of the failing checks, `behaviour`
+  accounts for 28 of 33; `registered`, `validated`, `minor_units` and
+  `ledger_error` fail 0–1 times each across 144 trials. The rebuild bought ~5
+  named checks per task, but on this pool four of them are saturated — so the
+  effective instrument is still close to one bit, which is the thing the rebuild
+  set out to fix.
+- **Six contrasts were computed.** At α=0.05 the family-wise error rate is ~26%,
+  and `diluted - oracle` is the only one excluding zero. Treat it as the one
+  worth replicating, not as established.
+- **No noise-only arm.** Facts+noise beat facts, but the design cannot say
+  whether the eight process notes would beat *nothing*. That arm was cut for
+  budget and is now the single highest-value follow-up — it is the difference
+  between "process advice helps" and "diluting an over-forceful rule helps".
+- **One run, k=4.** This repo's own headline effect has flipped sign three
+  times.
+
+### What follows
+
+1. Add the **noise-only** arm. It is the missing cell of the 2×2 and it decides
+   which mechanism above is real.
+2. Raise task difficulty until control lands nearer 0.6 than 0.95. Five tasks at
+   a clean 1.00 are contributing nothing but cost.
+3. Make the conventions load-bearing in the tasks, or stop claiming the eval
+   measures convention transfer. Right now a task can fail every convention
+   check and still be rare enough not to matter.

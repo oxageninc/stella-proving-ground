@@ -4,3 +4,4 @@ __pycache__/
 runs/
 results/*/work/
 results/*/stores/
+results/precision-probe-run.log
