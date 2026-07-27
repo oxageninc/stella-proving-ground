@@ -172,3 +172,106 @@ are never extracted into `context_records` by anything. Without an explicit
 the experiment would measure plumbing rather than transfer. The pump is an
 intervention and is recorded as part of the pinned config, so a reader can tell
 this series apart from an unassisted one.
+
+---
+
+## Amendment 2 — the effort and steering outcomes, and what would let us claim self-improvement
+
+Recorded 2026-07-27 while `series-005` is running and **before any of its
+results have been read** (150 of 990 trials written at the time of writing, no
+scoreboard generated). This exists so the bar cannot be moved after the data
+arrives.
+
+### Why an amendment is needed
+
+Finding 12 discovered — *post hoc*, on data gathered to answer a different
+question — that hand-injected context cut model calls 25%, cost 33%, and
+stuck-loops from 8/48 to zero, while task pass rate showed nothing. That
+reframing is almost certainly right, but it was **exploratory**: the outcome was
+chosen after seeing the data. Exploratory findings do not become claims by being
+persuasive. They become claims by being pre-registered and then reproduced on
+data that did not generate them. This amendment does the pre-registering.
+
+### The distinction that actually matters
+
+"Context helps" and "the system is self-improving" are different claims, and the
+probe only supports the first — and only for effort.
+
+| claim | what it needs | status |
+|---|---|---|
+| Injected context helps | oracle/diluted arm beats control | **held**, on effort only (finding 12) |
+| The memory pipeline delivers some of it | `treatment` beats `control` **and** `sham` | untested |
+| **The system self-improves** | that gain **grows with accumulated experience** | untested |
+
+The third is the only one that earns the word. An agent handed the right facts
+works faster; that is prompting, not learning. Self-improvement requires the
+agent's *own* accumulated experience to produce the gain, and for more
+experience to produce more of it.
+
+### Primary outcome — ONE, fixed in advance
+
+**Model calls per completed trial, `treatment` − `control`, at the final epoch.**
+
+Not a basket of four. Four outcomes across two arm-pairs across three epochs is
+24 contrasts, and at α=0.05 roughly one in't three such families throws a false
+positive. Everything else below is secondary and will be reported as such.
+
+Model calls is chosen because it was the largest and cleanest probe effect, it
+is continuous so it does not saturate on this pool, and it is denominated in
+work rather than money (so it cannot move because token prices did).
+
+### Thresholds
+
+* **Direction and size:** treatment uses **≥10% fewer model calls** than control,
+  matching the existing `MIN_MEANINGFUL_EFFECT = 0.10` in spirit — a
+  statistically separated 2% is not a result.
+* **Interval:** the bootstrap 95% CI on the paired per-task delta excludes zero.
+* **Sham:** treatment must beat **sham** by the same bar. Sham carries irrelevant
+  memories of the same bulk, so a treatment-only gain that sham also shows is a
+  prompt-length effect, not memory.
+* **Replication:** the above must hold in **two independent series**. This
+  repo's headline effect has flipped sign three times; one series is not a
+  result, and that rule is not suspended because the outcome changed.
+
+### For the strong claim — self-improvement, not just "memory helps"
+
+All of the above, **plus a monotone trend across epochs**: the treatment−control
+gap at E2 exceeds E1 exceeds E0, with E0 near zero. E0 is the honest zero point,
+because at E0 the treatment arm has accumulated nothing and *should* look like
+control. A flat gap that is already present at E0 is a configuration difference
+between arms, not learning.
+
+### Instrument health gates — all must be green, checked before scoring
+
+Today made these concrete rather than ceremonial.
+
+1. `make smoke` passes (97 tests): verifiers fail on an untouched corpus, pass on
+   the reference solutions, corpus pristine, no prompt states its own answer.
+2. **No provider outage.** `health.provider_outage` clean, and zero-model-call
+   trials under 5%. `series-003` produced *"treatment 43/60, every other arm
+   0/60"* — a spectacular effect that was a dead socket, and it exited 0 with the
+   budget guard silent because a dead socket costs nothing.
+3. **Leakage gate clean.** A treatment arm that memorised evaluation answers
+   would show a real gain for the wrong reason.
+4. **Corpus digest unchanged** across the run.
+5. The series is complete — no partial arm-epoch scored (already enforced).
+
+### What would falsify it
+
+* Treatment matches control on model calls while the probe's oracle arm, on the
+  same pool and binary, still shows its −25%. That is the sharpest available
+  negative: the ceiling is real and reachable by hand, and the pipeline captures
+  none of it. It localises the failure to acquisition/retrieval/injection rather
+  than leaving "context does not help" as a vague null.
+* Sham matches treatment — the gain is prompt bulk, not memory.
+* The gap exists at E0 — it is a configuration artifact, not learning.
+* Any health gate red — the run is void regardless of how good the number looks.
+
+### Reporting commitment
+
+The primary outcome will be reported **whatever it shows**, before the
+secondaries, with its CI and not merely a point estimate. Secondary outcomes
+(cost, output tokens, stuck-loop rate, accuracy) will be labelled secondary and
+their contrast count stated. If the primary fails and a secondary passes, that
+will be reported as a failed primary with an exploratory secondary — not as a
+success.
