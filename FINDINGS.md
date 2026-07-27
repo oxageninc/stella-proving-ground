@@ -546,3 +546,83 @@ Two corrections to how this repo has been spending:
 The re-baselined series is deliberately **not** run. It would re-measure this
 same saturated instrument at ~$17 for the current 22-task pool, and its control
 arm cannot move.
+
+---
+
+## 11. Two attempts at raising difficulty failed. Arithmetic is the wrong lever.
+
+Finding 10b's conclusion was that the instrument, not the treatment, was the
+blocker: control scored 0.950 on checks with five of twelve tasks perfect in
+every arm. The obvious response was to make the tasks harder. Two attempts, both
+measured with a control-only calibration run before spending anything else:
+
+| pool | task pass | check rate | tasks at 1.00 | cost |
+|---|---|---|---|---|
+| original (`f8a7dfe7`) | 0.792 | 0.950 | 5/12 | — |
+| attempt 1 (`bf230f30`) | 0.771 | 0.938 | 8/12 | $0.48 |
+| attempt 2 (`a01e7a21`) | 0.771 | 0.936 | 7/12 | $0.63 |
+
+**Nothing moved.** 0.771 against an original 0.792, and at n=48 the standard
+error is 0.061 — so the final number is indistinguishable from anything in
+[0.65, 0.89]. Two iterations and $1.11 bought no measurable change.
+
+### What was tried
+
+**Attempt 1** — amounts whose naive parse is wrong (`int(float("1.15")*100)` is
+114, not 115, while `money.parse_amount` returns 115), odd starting balances so
+percentages leave a real fraction of a cent, and a second invocation on stateful
+tasks so accumulation errors surface.
+
+This *backfired*, and the reason is worth recording: each spec stated the exact
+expected output, and for a computed field that string **is** the answer. Telling
+the agent to print `collected 7.01 tax from alice` removes any need to work out
+that 7% of 100.15 floors to 701 minor units. Tasks at a perfect score went
+5/12 → 8/12. The pool got easier while it was being made harder.
+
+**Attempt 2** — every worked example rewritten to use numbers that are not the
+seeded case, so the format stays pinned exactly while the value must be
+computed. Guarded by `test_a_prompt_never_states_the_seeded_answer`, which reads
+each task's `setup.json` and refuses any prompt containing a rendered balance or
+their total. That recovered ~2 points of check rate and no task pass at all.
+
+### Why it did not work
+
+The traps *do* fire when the answer is withheld — `eval-03-interest` fails with
+`credited 500.75 interest to alice`, the float leaking straight into the output.
+But they fire rarely, because the model reads the corpus, finds `money.py`, and
+uses `parse_amount`. The four conventions are discoverable in about a minute of
+reading, which is the same fact that made finding 10's oracle arm useless: you
+cannot make knowledge valuable by testing it harder when it is already free.
+
+Seven of twelve tasks remain at a clean 1.00. Four carry the entire signal —
+`installments` 0.75, `reconcile` 0.83, `interest` 0.85, `share` 0.85 — and the
+other eight buy nothing but cost.
+
+### The calibration instrument is itself coarse
+
+A 48-trial control run resolves to ±0.12 at 95%. It can tell 0.95 from 0.60; it
+cannot tune difficulty finely, and it certainly cannot detect the ~2-point moves
+these attempts produced. Anyone iterating on difficulty with this loop should
+size the change to be obvious, or size the run to see it.
+
+### What follows
+
+Stop tuning arithmetic. Two measured failures are enough to call the lever wrong
+for this model. The remaining options, in the order they seem worth trying:
+
+1. **Change the difficulty axis** to something a single careful read cannot
+   solve — a later command that must respect an earlier one's journal format, or
+   state that must survive a sequence rather than an invocation.
+2. **Prune the seven saturated tasks.** It will not lower control much, but
+   roughly 60% of every run currently pays for trials that cannot move.
+3. **Replace the pool with a harder one that still shares a codebase.**
+   Heterogeneous benchmarks (Terminal-Bench and similar) buy headroom but cost
+   the mechanism: the value of this design is that the transferable knowledge is
+   a small enumerable set, which is what made "0 of 10 memories captured a
+   convention that decided pass/fail" a computable statement. A harder *single
+   repo* keeps that; a scattered pool does not.
+
+The honest summary is that the ledger corpus may simply be too small a world to
+contain knowledge worth remembering. That is a finding about the experiment's
+design, and it was cheaper to learn from $1.11 of calibration than from a $17
+series.
