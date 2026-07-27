@@ -1,8 +1,0 @@
-{
-  "accounts": {
-    "alice": 10000,
-    "bob": 2500,
-    "carol": 0
-  },
-  "journal": []
-}
