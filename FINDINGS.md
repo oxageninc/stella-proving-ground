@@ -383,6 +383,11 @@ not an incidental one.
 
 ## 10. Perfectly-delivered conventions did not help — and the "noise" did
 
+> **PARTLY RETRACTED — see 10b.** The claim that the mined process notes helped
+> was made without the arm that could test it. A noise-only arm was run
+> afterwards and refutes it. The oracle result below stands; the explanation
+> credited to the process notes does not.
+
 The ceiling probe (`experiments/precision_probe.py`) hands the agent context in
 the prompt, bypassing the lifecycle entirely — no store, no recall, no ranking.
 It exists to separate *"the facts never arrive"* from *"the facts would not help
@@ -470,3 +475,74 @@ prioritization, not about the graph index being wrong.
 3. Make the conventions load-bearing in the tasks, or stop claiming the eval
    measures convention transfer. Right now a task can fail every convention
    check and still be rare enough not to matter.
+
+---
+
+## 10b. The noise-only arm refutes half of finding 10
+
+Finding 10 credited the eight mined process notes with diluted's advantage, on
+the strength of a stuck-loop count (control 8, oracle 4, diluted 0) and three of
+those notes being about not looping. That inference had no arm behind it, and
+finding 10 said so — "the design cannot say whether the eight process notes
+would beat *nothing*". The missing cell was run. It does not.
+
+Completing the 2×2 over {facts} × {process notes}, 192 trials, one digest, one
+binary, $2.57 total:
+
+| | no notes | notes |
+|---|---|---|
+| **no facts** | control 0.792 | noise 0.812 |
+| **facts** | oracle 0.688 | diluted 0.896 |
+
+```
+noise   - control   task pass  +0.021  [-0.083, +0.125]   —
+oracle  - control   task pass  -0.104  [-0.208, +0.000]   —
+diluted - control   task pass  +0.104  [-0.021, +0.229]   —
+diluted - oracle    task pass  +0.208  [+0.083, +0.354]   excludes 0
+```
+
+The process notes are **inert on their own**: noise lands on top of control on
+both scales, and its stuck-loop count is 6 against control's 8 — not the 0 that
+prompted the mechanism. Whatever produced diluted's clean loop record, it is not
+"the notes teach the agent to stop looping", because the notes alone did not.
+
+### What actually survives
+
+Of six contrasts, exactly one excludes zero — `diluted - oracle` — and it is a
+contrast **between two treatment arms, neither of which reliably beats
+control**. Read together with `oracle - control` sitting at `[-0.208, +0.000]`,
+the parsimonious account is not that any arm helped. It is that **oracle alone
+hurt, and adding the notes cancelled the harm**. Diluted is not a gain over
+doing nothing; it is a recovery from a self-inflicted loss.
+
+The one mechanism that still has direct evidence is the over-application
+signature, which is unchanged and remains categorical: three `missing required
+argument` failures, all oracle, zero across the 144 control, noise and diluted
+trials. Handing the agent a perfectly-stated rule is also handing it an
+instruction to enforce that rule where it does not apply.
+
+### The real blocker is the instrument, not the treatment
+
+None of this can be resolved by more arms. Control already scores 0.950 on
+checks with 5 of 12 tasks at a clean 1.00, so the largest improvement any
+treatment could possibly show is ~0.05, and the noise-vs-control interval is
+±0.03 wide. The probe cannot distinguish "no effect" from "an effect smaller
+than the ceiling permits", and that is true of every question this pool is now
+asked.
+
+Two corrections to how this repo has been spending:
+
+1. **Stop buying arms; buy headroom.** Tasks need to be hard enough that control
+   lands near 0.6. Five tasks at 1.00 across all four arms contributed nothing
+   but cost — roughly 40% of $2.57.
+2. **Make the conventions decide outcomes, or stop calling this a convention
+   eval.** `behaviour` accounts for 28 of 33 failing checks; `registered`,
+   `validated`, `minor_units` and `ledger_error` fail 0–1 times each in 192
+   trials. The four conventions the oracle block states are precisely the ones
+   the agent already gets right unaided, which is why stating them can only do
+   harm. A context experiment whose facts address a failure mode the tasks do
+   not exhibit was never going to measure context.
+
+The re-baselined series is deliberately **not** run. It would re-measure this
+same saturated instrument at ~$17 for the current 22-task pool, and its control
+arm cannot move.
