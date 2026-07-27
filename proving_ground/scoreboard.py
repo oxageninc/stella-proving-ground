@@ -124,6 +124,35 @@ def render(results_path: Path) -> str:
                 cells.append(_fmt(getattr(s, attr), spec) if s else "—")
             out.append(f"| {arm} | " + " | ".join(cells) + " |")
 
+    out.append("\n## Memorization check — worked tasks vs. held-out tasks\n")
+    out.append(
+        "The evaluation pool is never worked, so it can only show transfer. The "
+        "experience pool *is* worked, so it can show memorization. Improvement "
+        "that appears on worked tasks and not on held-out ones is memorization, "
+        "correctly named — and a context system is supposed to memorize, so "
+        "seeing it here is expected rather than damning. The divergence between "
+        "the two columns is the measurement.\n"
+    )
+    out.append("| arm | epoch | worked-task pass rate | held-out pass rate | divergence |")
+    out.append("|---|---|---|---|---|")
+    exp_rows = [r for r in rows if r.get("pool") == "experience"]
+    for arm in arms:
+        for e in epochs:
+            worked = [r for r in exp_rows if r["arm"] == arm and r["epoch"] == e]
+            held = [
+                r for r in rows
+                if r.get("pool") == "evaluation" and r["arm"] == arm and r["epoch"] == e
+            ]
+            if not worked and not held:
+                continue
+            wr = (sum(1 for r in worked if r["passed"]) / len(worked)) if worked else float("nan")
+            hr = (sum(1 for r in held if r["passed"]) / len(held)) if held else float("nan")
+            div = wr - hr if worked and held else float("nan")
+            out.append(
+                f"| {arm} | E{e} | {_fmt(wr)} (n={len(worked)}) | "
+                f"{_fmt(hr)} (n={len(held)}) | {_fmt(div, '+.3f')} |"
+            )
+
     out.append("\n## Instrument health\n")
     out.append(
         "Degenerate trials — ones that produced no work at all — are reported "
