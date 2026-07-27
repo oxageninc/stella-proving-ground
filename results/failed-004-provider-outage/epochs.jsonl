@@ -1,0 +1,1 @@
+{"arm": "treatment", "config_fingerprint": "37ab289b494cd09e", "epoch": 0, "eval_cost_usd": 0.450179, "eval_solved": 41, "eval_trials": 60, "invalidated": false, "leak_scan": {"clean": true, "hit_count": 0, "hits": [], "scanned_values": 0, "signature_size": 499}, "store_stats": {"bytes": 0, "context_records": 0, "episodes": 0, "memories": 0}}
