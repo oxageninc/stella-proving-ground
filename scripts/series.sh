@@ -34,7 +34,12 @@ mkdir -p "$ROOT"
 
 "$HERE/guard-budget.sh" "$BUDGET_FLOOR" &
 guard=$!
-trap 'kill "$guard" 2>/dev/null || true' EXIT
+# Two ways a run turns into garbage without stopping: the money runs out, and
+# the provider stops answering. The second one costs nothing, so no balance
+# check catches it — see guard-provider.sh for what it did to series-003.
+"$HERE/guard-provider.sh" "$ROOT" "${PROVIDER_STREAK:-12}" &
+pguard=$!
+trap 'kill "$guard" "$pguard" 2>/dev/null || true' EXIT
 
 # `tee` must not swallow a non-zero exit from the run: pipefail is set above,
 # so the pipeline reports the runner's status, not tee's.
