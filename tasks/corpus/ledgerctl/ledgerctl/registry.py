@@ -4,10 +4,11 @@
 listed here is unreachable. See CONTRIBUTING.md.
 """
 
-from .commands import balance, deposit, transfer
+from .commands import balance, deposit, sweep, transfer
 
 COMMANDS = {
     "balance": balance,
     "deposit": deposit,
     "transfer": transfer,
+    "sweep": sweep,
 }
