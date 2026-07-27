@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from verifier_lib import (
+    CheckReport,
     assert_ledger_error,
     assert_minor_units,
     assert_registered,
@@ -13,20 +14,42 @@ from verifier_lib import (
     VerifyFailure,
 )
 
+ACCOUNTS = {"alice": 10000, "bob": 0}
+JOURNAL = []
 
-def verify(ws: Path) -> None:
 
-    assert_registered(ws, 'close')
-    assert_minor_units(ws)
-    assert_validates(ws, 'close')
+def _seed(ws: Path) -> None:
+    """Known state before every stateful check — never the agent's leftovers."""
+    write_ledger(ws, ACCOUNTS, JOURNAL)
 
-    write_ledger(ws, {"alice": 10000, "bob": 0})
-    rc, out, err = run_cli(ws, "close", "--account", "bob")
-    if rc != 0:
-        raise VerifyFailure(f"close failed: rc={rc} err={err!r}")
-    if out != "closed bob":
-        raise VerifyFailure(f"unexpected output: {out!r}")
-    if "bob" in load_ledger(ws)["accounts"]:
-        raise VerifyFailure("bob should be gone from accounts")
-    assert_minor_units(ws)
-    assert_ledger_error(ws, "close", "--account", "alice")
+
+def verify(ws: Path) -> CheckReport:
+    report = CheckReport(ws)
+
+    def behaviour():
+        _seed(ws)
+        rc, out, err = run_cli(ws, 'close', '--account', 'bob')
+        if rc != 0:
+            raise VerifyFailure(f"rc={rc} err={err!r}")
+        if out != 'closed bob':
+            raise VerifyFailure(f"unexpected output: {out!r}")
+        data = load_ledger(ws)
+        if 'bob' in data["accounts"]:
+            raise VerifyFailure("bob should be gone")
+
+    report.check("registered", lambda: assert_registered(ws, 'close'))
+    report.check("behaviour", behaviour)
+    report.check("minor_units", lambda: assert_minor_units(ws))
+
+    def error_path():
+        _seed(ws)
+        assert_ledger_error(ws, 'close', '--account', 'alice')
+
+    report.check("ledger_error", error_path)
+
+    def validated():
+        _seed(ws)
+        assert_validates(ws, 'close')
+
+    report.check("validated", validated)
+    return report

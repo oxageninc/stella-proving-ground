@@ -111,7 +111,7 @@ def _purge_corpus_modules() -> None:
             del sys.modules[name]
 
 
-def score(task: Task, workspace: Path, sandbox: Path) -> tuple[bool, str]:
+def score(task: Task, workspace: Path, sandbox: Path) -> tuple[bool, str, dict]:
     """Run the deterministic verifier against a *copy* of the finished workspace.
 
     Copying matters twice over: the verifier rewrites `ledger.json` as it walks
@@ -134,11 +134,17 @@ def score(task: Task, workspace: Path, sandbox: Path) -> tuple[bool, str]:
     _purge_corpus_modules()
     try:
         spec.loader.exec_module(module)
-        module.verify(sandbox)
-        return True, ""
+        report = module.verify(sandbox)
+        # Named checks are the point: one bit per task gave the bootstrap n=6
+        # and a CI wider than the effect. A verifier that still raises instead
+        # of reporting is treated as a single failed check rather than
+        # crashing the trial.
+        if report is None:
+            return True, "", {}
+        return report.passed, report.detail, report.as_dict()
     except Exception as exc:  # noqa: BLE001 — any failure is a task failure
         detail = f"{type(exc).__name__}: {exc}"
-        return False, detail[:500]
+        return False, detail[:500], {}
     finally:
         while sandbox_str in sys.path:
             sys.path.remove(sandbox_str)

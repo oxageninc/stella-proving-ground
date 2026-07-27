@@ -66,6 +66,11 @@ class Trial:
     recalled_frames: int = 0
     recall_methods: list[str] = field(default_factory=list)
     cited_frames: int = 0
+    #: Per-check outcomes — the finer-grained signal. `{"registered": True, ...}`
+    checks: dict = field(default_factory=dict)
+    #: The agent removed or corrupted state it was given. Counted separately
+    #: because it is noise in the dimension being measured, not a convention miss.
+    destroyed_workspace: bool = False
     models_observed: list[str] = field(default_factory=list)
     status: str = ""
     stella_error: str = ""
@@ -169,7 +174,8 @@ def run_trial(
         result.wall_clock_s = time.monotonic() - started
         result.status = "timeout"
         result.stella_error = f"exceeded {timeout_s}s"
-        result.passed, result.detail = score(task, workspace, sandbox)
+        result.passed, result.detail, result.checks = score(task, workspace, sandbox)
+        result.destroyed_workspace = "workspace-destroyed" in result.detail
         return result
     result.wall_clock_s = time.monotonic() - started
 
@@ -212,7 +218,8 @@ def run_trial(
             f"would inherit the change. The series is void."
         )
 
-    result.passed, result.detail = score(task, workspace, sandbox)
+    result.passed, result.detail, result.checks = score(task, workspace, sandbox)
+    result.destroyed_workspace = "workspace-destroyed" in result.detail
     if learn and store is not None:
         harvest_store(workspace, store)
     return result

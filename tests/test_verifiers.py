@@ -31,7 +31,7 @@ def test_verifier_fails_on_untouched_corpus(task, tmp_path):
     """
     ws = tmp_path / "ws"
     materialize(task, ws)
-    passed, detail = score(task, ws, tmp_path / "sandbox")
+    passed, detail, _ = score(task, ws, tmp_path / "sandbox")
     assert not passed, f"{task.task_id} passed without any implementation"
     assert detail, "a failing verifier must say why"
 
@@ -46,7 +46,7 @@ def test_verifier_passes_on_reference_solution(task, tmp_path):
     ws = tmp_path / "ws"
     materialize(task, ws)
     apply(ws, task.command)
-    passed, detail = score(task, ws, tmp_path / "sandbox")
+    passed, detail, _ = score(task, ws, tmp_path / "sandbox")
     assert passed, f"{task.task_id} not winnable by the reference solution: {detail}"
 
 

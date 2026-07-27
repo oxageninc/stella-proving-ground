@@ -1,4 +1,4 @@
-"""Deterministic verifier for exp-08-count. Mounted read-only at scoring time."""
+"""Deterministic verifier for eval-12-largest. Mounted read-only at scoring time."""
 
 from pathlib import Path
 
@@ -28,14 +28,14 @@ def verify(ws: Path) -> CheckReport:
 
     def behaviour():
         _seed(ws)
-        rc, out, err = run_cli(ws, 'count')
+        rc, out, err = run_cli(ws, 'largest')
         if rc != 0:
             raise VerifyFailure(f"rc={rc} err={err!r}")
-        if out != 'accounts 2':
+        if out != 'alice 100.00':
             raise VerifyFailure(f"unexpected output: {out!r}")
         data = load_ledger(ws)
 
-    report.check("registered", lambda: assert_registered(ws, 'count'))
+    report.check("registered", lambda: assert_registered(ws, 'largest'))
     report.check("behaviour", behaviour)
     report.check("minor_units", lambda: assert_minor_units(ws))
 

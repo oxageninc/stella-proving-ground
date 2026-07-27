@@ -10,15 +10,13 @@
       "amount": 100
     },
     {
-      "type": "transfer",
-      "from": "alice",
-      "to": "bob",
-      "amount": 50
+      "type": "fee",
+      "account": "bob",
+      "amount": 75
     },
     {
-      "type": "deposit",
-      "account": "bob",
-      "amount": 25
+      "type": "note",
+      "account": "alice"
     }
   ]
 }

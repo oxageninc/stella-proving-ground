@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from verifier_lib import (
+    CheckReport,
     assert_ledger_error,
     assert_minor_units,
     assert_registered,
@@ -13,26 +14,44 @@ from verifier_lib import (
     VerifyFailure,
 )
 
+ACCOUNTS = {"alice": 10000, "bob": 2500}
+JOURNAL = []
 
-def verify(ws: Path) -> None:
 
-    assert_registered(ws, 'zero')
-    assert_minor_units(ws)
-    assert_validates(ws, 'zero')
+def _seed(ws: Path) -> None:
+    """Known state before every stateful check — never the agent's leftovers."""
+    write_ledger(ws, ACCOUNTS, JOURNAL)
 
-    write_ledger(ws, {"alice": 10000, "bob": 2500})
-    rc, out, err = run_cli(ws, "zero", "--account", "alice")
-    if rc != 0:
-        raise VerifyFailure(f"zero failed: rc={rc} err={err!r}")
-    if out != "zeroed alice":
-        raise VerifyFailure(f"unexpected output: {out!r}")
-    data = load_ledger(ws)
-    if data["accounts"]["alice"] != 0:
-        raise VerifyFailure(f"alice should be 0, got {data['accounts']['alice']!r}")
-    entries = [e for e in data["journal"] if e.get("type") == "zero"]
-    if not entries:
-        raise VerifyFailure("no journal entry with type 'zero'")
-    if entries[-1].get("amount") != 10000:
-        raise VerifyFailure(f"zero entry amount should be 10000, got {entries[-1].get('amount')!r}")
-    assert_minor_units(ws)
-    assert_ledger_error(ws, "zero", "--account", "nobody")
+
+def verify(ws: Path) -> CheckReport:
+    report = CheckReport(ws)
+
+    def behaviour():
+        _seed(ws)
+        rc, out, err = run_cli(ws, 'zero', '--account', 'alice')
+        if rc != 0:
+            raise VerifyFailure(f"rc={rc} err={err!r}")
+        if out != 'zeroed alice':
+            raise VerifyFailure(f"unexpected output: {out!r}")
+        data = load_ledger(ws)
+        if data["accounts"].get('alice') != 0:
+            raise VerifyFailure(f"alice should be 0, got {data['accounts'].get('alice')!r}")
+        if not any(e.get("type") == 'zero' for e in data["journal"]):
+            raise VerifyFailure("no journal entry with type zero")
+
+    report.check("registered", lambda: assert_registered(ws, 'zero'))
+    report.check("behaviour", behaviour)
+    report.check("minor_units", lambda: assert_minor_units(ws))
+
+    def error_path():
+        _seed(ws)
+        assert_ledger_error(ws, 'zero', '--account', 'nobody')
+
+    report.check("ledger_error", error_path)
+
+    def validated():
+        _seed(ws)
+        assert_validates(ws, 'zero')
+
+    report.check("validated", validated)
+    return report

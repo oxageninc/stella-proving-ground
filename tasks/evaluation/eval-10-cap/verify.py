@@ -1,4 +1,4 @@
-"""Deterministic verifier for eval-02-sweep. Mounted read-only at scoring time."""
+"""Deterministic verifier for eval-10-cap. Mounted read-only at scoring time."""
 
 from pathlib import Path
 
@@ -28,32 +28,30 @@ def verify(ws: Path) -> CheckReport:
 
     def behaviour():
         _seed(ws)
-        rc, out, err = run_cli(ws, 'sweep', '--from', 'alice', '--to', 'bob')
+        rc, out, err = run_cli(ws, 'cap', '--account', 'alice', '--max', '50.00')
         if rc != 0:
             raise VerifyFailure(f"rc={rc} err={err!r}")
-        if out != 'swept 100.00 from alice to bob':
+        if out != 'capped alice at 50.00, removed 50.00':
             raise VerifyFailure(f"unexpected output: {out!r}")
         data = load_ledger(ws)
-        if data["accounts"].get('alice') != 0:
-            raise VerifyFailure(f"alice should be 0, got {data['accounts'].get('alice')!r}")
-        if data["accounts"].get('bob') != 12500:
-            raise VerifyFailure(f"bob should be 12500, got {data['accounts'].get('bob')!r}")
-        if not any(e.get("type") == 'sweep' for e in data["journal"]):
-            raise VerifyFailure("no journal entry with type sweep")
+        if data["accounts"].get('alice') != 5000:
+            raise VerifyFailure(f"alice should be 5000, got {data['accounts'].get('alice')!r}")
+        if not any(e.get("type") == 'cap' for e in data["journal"]):
+            raise VerifyFailure("no journal entry with type cap")
 
-    report.check("registered", lambda: assert_registered(ws, 'sweep'))
+    report.check("registered", lambda: assert_registered(ws, 'cap'))
     report.check("behaviour", behaviour)
     report.check("minor_units", lambda: assert_minor_units(ws))
 
     def error_path():
         _seed(ws)
-        assert_ledger_error(ws, 'sweep', '--from', 'nobody', '--to', 'bob')
+        assert_ledger_error(ws, 'cap', '--account', 'nobody', '--max', '1.00')
 
     report.check("ledger_error", error_path)
 
     def validated():
         _seed(ws)
-        assert_validates(ws, 'sweep')
+        assert_validates(ws, 'cap')
 
     report.check("validated", validated)
     return report

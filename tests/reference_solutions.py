@@ -216,6 +216,86 @@ def run(args: dict, store) -> str:
     store.post({"type": "merge", "from": src, "to": dst, "amount": minor})
     return f"merged {src} into {dst}"
 ''',
+    "tax": '''
+from ..money import format_amount
+from ..validate import require
+
+
+def run(args: dict, store) -> str:
+    require(args, "account", "rate")
+    name = args["account"]
+    balance = store.balance(name)
+    collected = balance * int(str(args["rate"])) // 100
+    store.debit(name, collected)
+    store.post({"type": "tax", "account": name, "amount": collected})
+    return f"collected {format_amount(collected)} tax from {name}"
+''',
+    "installments": '''
+from ..errors import ValidationError
+from ..money import format_amount, parse_amount
+from ..validate import require
+
+
+def run(args: dict, store) -> str:
+    require(args, "account", "amount", "count")
+    store.balance(args["account"])
+    count = int(str(args["count"]))
+    if count <= 0:
+        raise ValidationError("count must be a positive whole number")
+    minor = parse_amount(args["amount"])
+    share, remainder = divmod(minor, count)
+    parts = [share + (remainder if i == 0 else 0) for i in range(count)]
+    rendered = ", ".join(format_amount(p) for p in parts)
+    return f"{count} installments of {rendered}"
+''',
+    "reconcile": '''
+from ..money import format_amount
+
+
+def run(args: dict, store) -> str:
+    total = sum(e.get("amount", 0) or 0 for e in store.journal)
+    return f"journal {format_amount(total)} across {len(store.journal)} entries"
+''',
+    "cap": '''
+from ..money import format_amount, parse_amount
+from ..validate import require
+
+
+def run(args: dict, store) -> str:
+    require(args, "account", "max")
+    name = args["account"]
+    ceiling = parse_amount(args["max"])
+    balance = store.balance(name)
+    removed = max(0, balance - ceiling)
+    if removed:
+        store.debit(name, removed)
+    store.post({"type": "cap", "account": name, "amount": removed})
+    return f"capped {name} at {format_amount(ceiling)}, removed {format_amount(removed)}"
+''',
+    "share": '''
+from ..money import format_amount
+from ..validate import require
+
+
+def run(args: dict, store) -> str:
+    require(args, "account")
+    name = args["account"]
+    balance = store.balance(name)
+    total = sum(store.accounts.values())
+    percent = balance * 100 // total if total else 0
+    return f"{name} holds {percent}% of {format_amount(total)}"
+''',
+    "largest": '''
+from ..errors import ValidationError
+from ..money import format_amount
+
+
+def run(args: dict, store) -> str:
+    if not store.accounts:
+        raise ValidationError("no accounts in the ledger")
+    name = min(store.accounts, key=lambda n: (-store.accounts[n], n))
+    return f"{name} {format_amount(store.accounts[name])}"
+''',
 }
 
 

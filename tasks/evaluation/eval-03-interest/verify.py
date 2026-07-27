@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from verifier_lib import (
+    CheckReport,
     assert_ledger_error,
     assert_minor_units,
     assert_registered,
@@ -13,32 +14,44 @@ from verifier_lib import (
     VerifyFailure,
 )
 
+ACCOUNTS = {"alice": 10000, "bob": 2500}
+JOURNAL = []
 
-def verify(ws: Path) -> None:
 
-    assert_registered(ws, 'interest')
-    assert_minor_units(ws)
-    assert_validates(ws, 'interest')
+def _seed(ws: Path) -> None:
+    """Known state before every stateful check — never the agent's leftovers."""
+    write_ledger(ws, ACCOUNTS, JOURNAL)
 
-    write_ledger(ws, {"alice": 10000, "bob": 2500})
-    rc, out, err = run_cli(ws, "interest", "--account", "alice", "--rate", "5")
-    if rc != 0:
-        raise VerifyFailure(f"interest failed: rc={rc} err={err!r}")
-    if out != "credited 5.00 interest to alice":
-        raise VerifyFailure(f"unexpected output: {out!r}")
-    data = load_ledger(ws)
-    if data["accounts"]["alice"] != 10500:
-        raise VerifyFailure(f"alice should be 10500, got {data['accounts']['alice']!r}")
-    if not any(e.get("type") == "interest" for e in data["journal"]):
-        raise VerifyFailure("no journal entry with type 'interest'")
-    assert_minor_units(ws)
-    # Rounding down must not leave a float behind: 3 percent of 2500 is 75.
-    write_ledger(ws, {"alice": 10000, "bob": 2500})
-    rc, out, err = run_cli(ws, "interest", "--account", "bob", "--rate", "3")
-    if rc != 0:
-        raise VerifyFailure(f"interest (rate 3) failed: rc={rc} err={err!r}")
-    data = load_ledger(ws)
-    if data["accounts"]["bob"] != 2575:
-        raise VerifyFailure(f"bob should be 2575, got {data['accounts']['bob']!r}")
-    assert_minor_units(ws)
-    assert_ledger_error(ws, "interest", "--account", "nobody", "--rate", "5")
+
+def verify(ws: Path) -> CheckReport:
+    report = CheckReport(ws)
+
+    def behaviour():
+        _seed(ws)
+        rc, out, err = run_cli(ws, 'interest', '--account', 'alice', '--rate', '5')
+        if rc != 0:
+            raise VerifyFailure(f"rc={rc} err={err!r}")
+        if out != 'credited 5.00 interest to alice':
+            raise VerifyFailure(f"unexpected output: {out!r}")
+        data = load_ledger(ws)
+        if data["accounts"].get('alice') != 10500:
+            raise VerifyFailure(f"alice should be 10500, got {data['accounts'].get('alice')!r}")
+        if not any(e.get("type") == 'interest' for e in data["journal"]):
+            raise VerifyFailure("no journal entry with type interest")
+
+    report.check("registered", lambda: assert_registered(ws, 'interest'))
+    report.check("behaviour", behaviour)
+    report.check("minor_units", lambda: assert_minor_units(ws))
+
+    def error_path():
+        _seed(ws)
+        assert_ledger_error(ws, 'interest', '--account', 'nobody', '--rate', '5')
+
+    report.check("ledger_error", error_path)
+
+    def validated():
+        _seed(ws)
+        assert_validates(ws, 'interest')
+
+    report.check("validated", validated)
+    return report
