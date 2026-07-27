@@ -1,0 +1,43 @@
+{
+  "accounts": {
+    "alice": 1620000,
+    "bob": 615000
+  },
+  "journal": [
+    {
+      "type": "interest",
+      "account": "alice",
+      "rate": 500,
+      "amount": 50000
+    },
+    {
+      "type": "deposit",
+      "account": "bob",
+      "amount": 100000
+    },
+    {
+      "type": "interest",
+      "account": "bob",
+      "rate": 500,
+      "amount": 512500
+    },
+    {
+      "type": "interest",
+      "account": "alice",
+      "rate": 350,
+      "amount": 210000
+    },
+    {
+      "type": "interest",
+      "account": "alice",
+      "rate": 0,
+      "amount": 0
+    },
+    {
+      "type": "interest",
+      "account": "alice",
+      "rate": 500,
+      "amount": 1350000
+    }
+  ]
+}

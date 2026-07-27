@@ -1,0 +1,23 @@
+{
+  "accounts": {
+    "alice": 9750,
+    "bob": 3000
+  },
+  "journal": [
+    {
+      "type": "refund",
+      "account": "alice",
+      "amount": 250
+    },
+    {
+      "type": "deposit",
+      "account": "bob",
+      "amount": 1000
+    },
+    {
+      "type": "refund",
+      "account": "bob",
+      "amount": 500
+    }
+  ]
+}
