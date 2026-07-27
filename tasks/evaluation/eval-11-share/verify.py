@@ -14,7 +14,7 @@ from verifier_lib import (
     VerifyFailure,
 )
 
-ACCOUNTS = {"alice": 10000, "bob": 2500}
+ACCOUNTS = {"alice": 10015, "bob": 2537}
 JOURNAL = []
 
 
@@ -31,7 +31,7 @@ def verify(ws: Path) -> CheckReport:
         rc, out, err = run_cli(ws, 'share', '--account', 'alice')
         if rc != 0:
             raise VerifyFailure(f"rc={rc} err={err!r}")
-        if out != 'alice holds 80% of 125.00':
+        if out != 'alice holds 79% of 125.52':
             raise VerifyFailure(f"unexpected output: {out!r}")
         data = load_ledger(ws)
 

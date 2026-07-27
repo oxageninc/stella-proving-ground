@@ -14,7 +14,7 @@ from verifier_lib import (
     VerifyFailure,
 )
 
-ACCOUNTS = {"alice": 10000, "bob": 2500}
+ACCOUNTS = {"alice": 10015, "bob": 2537}
 JOURNAL = []
 
 
@@ -28,16 +28,22 @@ def verify(ws: Path) -> CheckReport:
 
     def behaviour():
         _seed(ws)
-        rc, out, err = run_cli(ws, 'topup', '--account', 'bob', '--amount', '7.25')
+        rc, out, err = run_cli(ws, 'topup', '--account', 'bob', '--amount', '0.29')
         if rc != 0:
             raise VerifyFailure(f"rc={rc} err={err!r}")
-        if out != 'topped up bob by 7.25':
+        if out != 'topped up bob by 0.29':
+            raise VerifyFailure(f"unexpected output: {out!r}")
+        rc, out, err = run_cli(ws, 'topup', '--account', 'bob', '--amount', '0.29')
+        if rc != 0:
+            raise VerifyFailure(f"rc={rc} err={err!r}")
+        if out != 'topped up bob by 0.29':
             raise VerifyFailure(f"unexpected output: {out!r}")
         data = load_ledger(ws)
-        if data["accounts"].get('bob') != 3225:
-            raise VerifyFailure(f"bob should be 3225, got {data['accounts'].get('bob')!r}")
-        if not any(e.get("type") == 'topup' for e in data["journal"]):
-            raise VerifyFailure("no journal entry with type topup")
+        if data["accounts"].get('bob') != 2595:
+            raise VerifyFailure(f"bob should be 2595, got {data['accounts'].get('bob')!r}")
+        seen = [e for e in data["journal"] if e.get("type") == 'topup']
+        if len(seen) != 2:
+            raise VerifyFailure(f"expected 2 topup journal entries, got {len(seen)}")
 
     report.check("registered", lambda: assert_registered(ws, 'topup'))
     report.check("behaviour", behaviour)

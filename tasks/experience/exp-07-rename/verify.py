@@ -14,7 +14,7 @@ from verifier_lib import (
     VerifyFailure,
 )
 
-ACCOUNTS = {"alice": 10000, "bob": 2500}
+ACCOUNTS = {"alice": 10015, "bob": 2537}
 JOURNAL = []
 
 
@@ -34,8 +34,8 @@ def verify(ws: Path) -> CheckReport:
         if out != 'renamed bob to robert':
             raise VerifyFailure(f"unexpected output: {out!r}")
         data = load_ledger(ws)
-        if data["accounts"].get('robert') != 2500:
-            raise VerifyFailure(f"robert should be 2500, got {data['accounts'].get('robert')!r}")
+        if data["accounts"].get('robert') != 2537:
+            raise VerifyFailure(f"robert should be 2537, got {data['accounts'].get('robert')!r}")
         if 'bob' in data["accounts"]:
             raise VerifyFailure("bob should be gone")
 

@@ -317,3 +317,46 @@ def apply(workspace, command: str) -> None:
         f'    "transfer": transfer,\n    "{command}": _{command},\n}}',
     )
     registry.write_text(text)
+
+
+#: A *wrong* implementation that a casual reading would produce: it parses the
+#: amount with `float` instead of `money.parse_amount`.
+#:
+#: This exists to prove the minor-units convention is load-bearing rather than
+#: decorative. Before the tasks used trap amounts, this implementation scored
+#: identically to the reference — it stores an integer, so `assert_minor_units`
+#: passed, and 2.50 survives a float round-trip so the balance was right too.
+#: The convention was being *checked* and never *decided* anything, which is why
+#: injecting it perfectly could only hurt (finding 10).
+NAIVE_FLOAT = '''
+from ..money import format_amount
+from ..validate import require
+
+
+def run(args: dict, store) -> str:
+    require(args, "account", "amount")
+    minor = int(float(args["amount"]) * 100)   # WRONG: 1.15 -> 114
+    store.debit(args["account"], minor)
+    store.post({"type": "%(cmd)s", "account": args["account"], "amount": minor})
+    return f"%(verb)s {format_amount(minor)} from {args['account']}"
+'''
+
+
+def apply_naive_float(workspace, command: str, verb: str) -> None:
+    """Install the float-parsing implementation of a debit command."""
+    from pathlib import Path
+
+    ws = Path(workspace)
+    (ws / "ledgerctl" / "commands" / f"{command}.py").write_text(
+        (NAIVE_FLOAT % {"cmd": command, "verb": verb}).lstrip()
+    )
+    registry = ws / "ledgerctl" / "registry.py"
+    text = registry.read_text()
+    text = text.replace(
+        "from .commands import balance, deposit, transfer",
+        f"from .commands import balance, deposit, transfer, {command} as _{command}",
+    ).replace(
+        '    "transfer": transfer,\n}',
+        f'    "transfer": transfer,\n    "{command}": _{command},\n}}',
+    )
+    registry.write_text(text)

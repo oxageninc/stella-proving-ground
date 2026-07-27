@@ -7,6 +7,7 @@ instrument stops being able to tell a solved task from an unsolved one.
 
 from __future__ import annotations
 
+import re
 import sqlite3
 import sys
 from pathlib import Path
@@ -98,11 +99,19 @@ def test_gate_fires_on_a_single_distinctive_string(tmp_path):
     """Positive control: leakage does not have to be a whole prompt.
 
     The realistic failure is one remembered output line, not a pasted task.
+
+    The canary line is lifted out of the task's own prompt rather than typed
+    here. It used to be the literal `swept 100.00 from alice to bob`, which
+    silently stopped being a leak the moment starting balances changed to odd
+    cents — the gate's positive control was passing because the string no
+    longer existed anywhere, not because the gate worked.
     """
+    sweep = next(t for t in load_pool("evaluation") if t.task_id == "eval-02-sweep")
+    canary = re.search(r"`(swept [^`]+)`", sweep.prompt).group(1)
     bodies = [t.prompt for t in load_pool("experience")]
-    bodies.append("remember: it prints swept 100.00 from alice to bob when done")
+    bodies.append(f"remember: it prints {canary} when done")
     report = scan(_store_with(tmp_path, bodies))
-    assert not report.clean
+    assert not report.clean, f"canary {canary!r} was not caught"
     assert any(h["task_id"] == "eval-02-sweep" for h in report.hits)
 
 
@@ -156,3 +165,33 @@ def test_a_partial_arm_epoch_is_not_scored():
     summary = summarize(rows)
     assert ("treatment", 0) in summary
     assert ("sham", 0) not in summary, "a partial arm-epoch must not be scored"
+
+
+def test_a_float_implementation_is_now_punished(tmp_path):
+    """The redesign's own control: the minor-units convention must DECIDE.
+
+    A handler that parses `1.15` with `float` produces 114 minor units instead
+    of 115. Every other convention it honours — it registers itself, it calls
+    `require`, it raises cleanly, and it stores an integer, so
+    `assert_minor_units` is satisfied.
+
+    It must still fail. If it passes, the evaluation is once again measuring
+    whether the agent can write a command rather than whether it knows the
+    house rule, and the whole point of using trap amounts is lost.
+    """
+    from tests.reference_solutions import apply_naive_float
+
+    task = next(t for t in load_pool("evaluation") if t.task_id == "eval-01-refund")
+    ws = tmp_path / "ws"
+    materialize(task, ws)
+    apply_naive_float(ws, "refund", "refunded")
+    passed, detail, checks = score(task, ws, tmp_path / "sandbox")
+
+    assert not passed, "a float-parsing implementation must not pass"
+    assert checks.get("behaviour") is False, f"behaviour should catch the cent: {detail}"
+    # The distinction worth having: it is not a *storage* violation. The value
+    # stored is a perfectly good integer — it is simply the wrong one.
+    assert checks.get("minor_units") is True, (
+        "assert_minor_units only checks the stored type, so it passes here — "
+        "which is exactly why the arithmetic has to be what catches this"
+    )

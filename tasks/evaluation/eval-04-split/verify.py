@@ -14,7 +14,7 @@ from verifier_lib import (
     VerifyFailure,
 )
 
-ACCOUNTS = {"alice": 10000, "bob": 2500, "carol": 0}
+ACCOUNTS = {"alice": 10015, "bob": 2537, "carol": 0}
 JOURNAL = []
 
 
@@ -28,18 +28,18 @@ def verify(ws: Path) -> CheckReport:
 
     def behaviour():
         _seed(ws)
-        rc, out, err = run_cli(ws, 'split', '--from', 'alice', '--to', 'bob,carol', '--amount', '10.01')
+        rc, out, err = run_cli(ws, 'split', '--from', 'alice', '--to', 'bob,carol', '--amount', '2.01')
         if rc != 0:
             raise VerifyFailure(f"rc={rc} err={err!r}")
-        if out != 'split 10.01 from alice across 2 accounts':
+        if out != 'split 2.01 from alice across 2 accounts':
             raise VerifyFailure(f"unexpected output: {out!r}")
         data = load_ledger(ws)
-        if data["accounts"].get('alice') != 8999:
-            raise VerifyFailure(f"alice should be 8999, got {data['accounts'].get('alice')!r}")
-        if data["accounts"].get('bob') != 3001:
-            raise VerifyFailure(f"bob should be 3001, got {data['accounts'].get('bob')!r}")
-        if data["accounts"].get('carol') != 500:
-            raise VerifyFailure(f"carol should be 500, got {data['accounts'].get('carol')!r}")
+        if data["accounts"].get('alice') != 9814:
+            raise VerifyFailure(f"alice should be 9814, got {data['accounts'].get('alice')!r}")
+        if data["accounts"].get('bob') != 2638:
+            raise VerifyFailure(f"bob should be 2638, got {data['accounts'].get('bob')!r}")
+        if data["accounts"].get('carol') != 100:
+            raise VerifyFailure(f"carol should be 100, got {data['accounts'].get('carol')!r}")
         if not any(e.get("type") == 'split' for e in data["journal"]):
             raise VerifyFailure("no journal entry with type split")
 

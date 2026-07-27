@@ -14,7 +14,7 @@ from verifier_lib import (
     VerifyFailure,
 )
 
-ACCOUNTS = {"alice": 10000, "bob": 2500}
+ACCOUNTS = {"alice": 10015, "bob": 2537}
 JOURNAL = []
 
 
@@ -31,7 +31,7 @@ def verify(ws: Path) -> CheckReport:
         rc, out, err = run_cli(ws, 'cap', '--account', 'alice', '--max', '50.00')
         if rc != 0:
             raise VerifyFailure(f"rc={rc} err={err!r}")
-        if out != 'capped alice at 50.00, removed 50.00':
+        if out != 'capped alice at 50.00, removed 50.15':
             raise VerifyFailure(f"unexpected output: {out!r}")
         data = load_ledger(ws)
         if data["accounts"].get('alice') != 5000:

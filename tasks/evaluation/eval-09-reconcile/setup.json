@@ -1,18 +1,18 @@
 {
   "accounts": {
-    "alice": 10000,
-    "bob": 2500
+    "alice": 10015,
+    "bob": 2537
   },
   "journal": [
     {
       "type": "deposit",
       "account": "alice",
-      "amount": 100
+      "amount": 1015
     },
     {
       "type": "fee",
       "account": "bob",
-      "amount": 75
+      "amount": 737
     },
     {
       "type": "note",

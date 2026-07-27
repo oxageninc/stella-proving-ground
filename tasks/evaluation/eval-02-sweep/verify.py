@@ -14,7 +14,7 @@ from verifier_lib import (
     VerifyFailure,
 )
 
-ACCOUNTS = {"alice": 10000, "bob": 2500}
+ACCOUNTS = {"alice": 10015, "bob": 2537}
 JOURNAL = []
 
 
@@ -31,13 +31,13 @@ def verify(ws: Path) -> CheckReport:
         rc, out, err = run_cli(ws, 'sweep', '--from', 'alice', '--to', 'bob')
         if rc != 0:
             raise VerifyFailure(f"rc={rc} err={err!r}")
-        if out != 'swept 100.00 from alice to bob':
+        if out != 'swept 100.15 from alice to bob':
             raise VerifyFailure(f"unexpected output: {out!r}")
         data = load_ledger(ws)
         if data["accounts"].get('alice') != 0:
             raise VerifyFailure(f"alice should be 0, got {data['accounts'].get('alice')!r}")
-        if data["accounts"].get('bob') != 12500:
-            raise VerifyFailure(f"bob should be 12500, got {data['accounts'].get('bob')!r}")
+        if data["accounts"].get('bob') != 12552:
+            raise VerifyFailure(f"bob should be 12552, got {data['accounts'].get('bob')!r}")
         if not any(e.get("type") == 'sweep' for e in data["journal"]):
             raise VerifyFailure("no journal entry with type sweep")
 

@@ -14,7 +14,7 @@ from verifier_lib import (
     VerifyFailure,
 )
 
-ACCOUNTS = {"alice": 10000, "bob": 0}
+ACCOUNTS = {"alice": 10015, "bob": 0}
 JOURNAL = []
 
 

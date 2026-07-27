@@ -14,7 +14,7 @@ from verifier_lib import (
     VerifyFailure,
 )
 
-ACCOUNTS = {"alice": 10000, "bob": 2500}
+ACCOUNTS = {"alice": 10015, "bob": 2537}
 JOURNAL = []
 
 
@@ -33,11 +33,17 @@ def verify(ws: Path) -> CheckReport:
             raise VerifyFailure(f"rc={rc} err={err!r}")
         if out != 'credited 5.00 interest to alice':
             raise VerifyFailure(f"unexpected output: {out!r}")
+        rc, out, err = run_cli(ws, 'interest', '--account', 'alice', '--rate', '5')
+        if rc != 0:
+            raise VerifyFailure(f"rc={rc} err={err!r}")
+        if out != 'credited 5.25 interest to alice':
+            raise VerifyFailure(f"unexpected output: {out!r}")
         data = load_ledger(ws)
-        if data["accounts"].get('alice') != 10500:
-            raise VerifyFailure(f"alice should be 10500, got {data['accounts'].get('alice')!r}")
-        if not any(e.get("type") == 'interest' for e in data["journal"]):
-            raise VerifyFailure("no journal entry with type interest")
+        if data["accounts"].get('alice') != 11040:
+            raise VerifyFailure(f"alice should be 11040, got {data['accounts'].get('alice')!r}")
+        seen = [e for e in data["journal"] if e.get("type") == 'interest']
+        if len(seen) != 2:
+            raise VerifyFailure(f"expected 2 interest journal entries, got {len(seen)}")
 
     report.check("registered", lambda: assert_registered(ws, 'interest'))
     report.check("behaviour", behaviour)

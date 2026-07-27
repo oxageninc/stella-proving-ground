@@ -14,8 +14,8 @@ from verifier_lib import (
     VerifyFailure,
 )
 
-ACCOUNTS = {"alice": 10000, "bob": 2500}
-JOURNAL = [{"type": "deposit", "account": "alice", "amount": 100}, {"type": "fee", "account": "bob", "amount": 75}, {"type": "note", "account": "alice"}]
+ACCOUNTS = {"alice": 10015, "bob": 2537}
+JOURNAL = [{"type": "deposit", "account": "alice", "amount": 1015}, {"type": "fee", "account": "bob", "amount": 737}, {"type": "note", "account": "alice"}]
 
 
 def _seed(ws: Path) -> None:
@@ -31,7 +31,7 @@ def verify(ws: Path) -> CheckReport:
         rc, out, err = run_cli(ws, 'reconcile')
         if rc != 0:
             raise VerifyFailure(f"rc={rc} err={err!r}")
-        if out != 'journal 1.75 across 3 entries':
+        if out != 'journal 17.52 across 3 entries':
             raise VerifyFailure(f"unexpected output: {out!r}")
         data = load_ledger(ws)
 

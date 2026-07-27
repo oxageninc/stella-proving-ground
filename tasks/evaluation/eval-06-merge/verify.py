@@ -14,7 +14,7 @@ from verifier_lib import (
     VerifyFailure,
 )
 
-ACCOUNTS = {"alice": 10000, "bob": 2500}
+ACCOUNTS = {"alice": 10015, "bob": 2537}
 JOURNAL = []
 
 
@@ -34,8 +34,8 @@ def verify(ws: Path) -> CheckReport:
         if out != 'merged bob into alice':
             raise VerifyFailure(f"unexpected output: {out!r}")
         data = load_ledger(ws)
-        if data["accounts"].get('alice') != 12500:
-            raise VerifyFailure(f"alice should be 12500, got {data['accounts'].get('alice')!r}")
+        if data["accounts"].get('alice') != 12552:
+            raise VerifyFailure(f"alice should be 12552, got {data['accounts'].get('alice')!r}")
         if 'bob' in data["accounts"]:
             raise VerifyFailure("bob should be gone")
         if not any(e.get("type") == 'merge' for e in data["journal"]):

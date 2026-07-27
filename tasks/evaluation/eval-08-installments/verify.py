@@ -14,7 +14,7 @@ from verifier_lib import (
     VerifyFailure,
 )
 
-ACCOUNTS = {"alice": 10000, "bob": 2500}
+ACCOUNTS = {"alice": 10015, "bob": 2537}
 JOURNAL = []
 
 
@@ -28,14 +28,14 @@ def verify(ws: Path) -> CheckReport:
 
     def behaviour():
         _seed(ws)
-        rc, out, err = run_cli(ws, 'installments', '--account', 'bob', '--amount', '10.00', '--count', '3')
+        rc, out, err = run_cli(ws, 'installments', '--account', 'bob', '--amount', '2.30', '--count', '3')
         if rc != 0:
             raise VerifyFailure(f"rc={rc} err={err!r}")
-        if out != '3 installments of 3.34, 3.33, 3.33':
+        if out != '3 installments of 0.78, 0.76, 0.76':
             raise VerifyFailure(f"unexpected output: {out!r}")
         data = load_ledger(ws)
-        if data["accounts"].get('bob') != 2500:
-            raise VerifyFailure(f"bob should be 2500, got {data['accounts'].get('bob')!r}")
+        if data["accounts"].get('bob') != 2537:
+            raise VerifyFailure(f"bob should be 2537, got {data['accounts'].get('bob')!r}")
 
     report.check("registered", lambda: assert_registered(ws, 'installments'))
     report.check("behaviour", behaviour)
@@ -43,7 +43,7 @@ def verify(ws: Path) -> CheckReport:
 
     def error_path():
         _seed(ws)
-        assert_ledger_error(ws, 'installments', '--account', 'bob', '--amount', '10.00', '--count', '0')
+        assert_ledger_error(ws, 'installments', '--account', 'bob', '--amount', '2.30', '--count', '0')
 
     report.check("ledger_error", error_path)
 

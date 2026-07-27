@@ -239,10 +239,13 @@ def summarize(rows: list[dict]) -> None:
 
 def main(trials: int = 4, concurrency: int = 10, floor: float = 1.50) -> int:
     config = PinnedConfig.resolve()
-    root = Path("results/precision-probe")
+    # A calibration run must not land in the same file as a scored probe: the
+    # task pool changes invalidate the comparison, and a mixed-digest results
+    # file is the exact confusion the analyzer has to warn about.
+    root = Path(os.environ.get("PROBE_OUT", "results/precision-probe"))
     root.mkdir(parents=True, exist_ok=True)
     out = root / "results.jsonl"
-    scratch = default_work_root("precision-probe")
+    scratch = default_work_root(root.name)
     scratch.mkdir(parents=True, exist_ok=True)
 
     tasks = load_pool("evaluation")
