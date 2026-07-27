@@ -226,6 +226,35 @@ def regression_rate(summary: dict[tuple[str, int], ArmEpoch], arm: str) -> list[
     return out
 
 
+def control_null(summary: dict[tuple[str, int], ArmEpoch]) -> dict:
+    """The empirical null: how much an arm moves for no reason at all.
+
+    The control arm does no experience work and its store is wiped before every
+    evaluation, so control at E0, E1, … E4 is *the same experiment repeated*.
+    Its spread across epochs is therefore a direct measurement of this setup's
+    run-to-run noise, requiring no extra runs and no distributional assumption.
+
+    This matters more than it might sound. In the first attempt at series 001,
+    control moved 18/30 → 24/30 between two epochs that were identical by
+    construction — a swing of 0.20, twice the pre-registered effect threshold.
+    Any treatment movement smaller than this band is indistinguishable from
+    nothing, however tidy the point estimate looks.
+    """
+    epochs = sorted(e for (a, e) in summary if a == "control")
+    values = [summary[("control", e)].accuracy for e in epochs]
+    if len(values) < 2:
+        return {"replications": len(values), "spread": float("nan"), "range": float("nan")}
+    mean = _mean(values)
+    variance = sum((v - mean) ** 2 for v in values) / (len(values) - 1)
+    return {
+        "replications": len(values),
+        "values": values,
+        "mean": mean,
+        "spread": variance**0.5,
+        "range": max(values) - min(values),
+    }
+
+
 def verdict(summary: dict[tuple[str, int], ArmEpoch]) -> dict:
     """Answer the pre-registered question, using the pre-registered rules.
 
@@ -249,10 +278,15 @@ def verdict(summary: dict[tuple[str, int], ArmEpoch]) -> dict:
     total_regressed = sum(r["regressed"] for r in regressions)
     total_solved_before = sum(r["solved_before"] for r in regressions)
 
-    # Treatment's movement has to clear the control arm's own drift; control is
-    # the same agent with an empty store, so anything it does too is not memory.
+    # Treatment's movement has to clear the control arm's own noise. Control is
+    # the same experiment repeated, so anything it does too is not memory.
+    null = control_null(summary)
     control_drift = abs(c_trend.get("delta", 0.0) or 0.0)
     treatment_delta = t_trend.get("delta", 0.0) or 0.0
+    null_range = null.get("range", float("nan"))
+    clears_null = (
+        abs(treatment_delta) > null_range if null_range == null_range else False
+    )
 
     supported = bool(
         t_vs_c
@@ -295,6 +329,11 @@ def verdict(summary: dict[tuple[str, int], ArmEpoch]) -> dict:
         "treatment_trend": treatment_delta,
         "control_drift": control_drift,
         "treatment_clears_control_drift": abs(treatment_delta) > control_drift,
+        "control_null": null,
+        "treatment_clears_control_null_range": clears_null,
+        "underpowered": (
+            null_range > MIN_MEANINGFUL_EFFECT if null_range == null_range else None
+        ),
         "regression_rate": _safe_div(total_regressed, total_solved_before),
         "regressed_task_instances": total_regressed,
     }

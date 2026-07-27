@@ -75,6 +75,26 @@ def render(results_path: Path) -> str:
             f"{_fmt(v['regression_rate'])} "
             f"({v['regressed_task_instances']} task-epochs lost).\n"
         )
+        null = v.get("control_null") or {}
+        if null.get("replications", 0) >= 2:
+            out.append(
+                f"\n**Empirical null.** The control arm does no experience work "
+                f"and is wiped before every evaluation, so its "
+                f"{null['replications']} epochs are the same experiment repeated. "
+                f"It ranged {_fmt(null['range'], '.3f')} "
+                f"(sd {_fmt(null['spread'], '.3f')}) across them, with nothing "
+                f"changed. Any effect smaller than that band is not "
+                f"distinguishable from nothing."
+            )
+            if v.get("underpowered"):
+                out.append(
+                    f"\n> **This series is underpowered for its own threshold.** "
+                    f"Control's no-op range ({_fmt(null['range'], '.3f')}) exceeds "
+                    f"the pre-registered {MIN_MEANINGFUL_EFFECT:.0%} effect size, so a "
+                    f"true effect at exactly that size could not be resolved here. "
+                    f"Reported rather than adjusted after the fact: the fix is more "
+                    f"evaluation tasks, not a friendlier threshold.\n"
+                )
 
     out.append("\n## Resolution accuracy (primary)\n")
     out.append("Mean per-task pass rate, with a 95% bootstrap CI over tasks.\n")
