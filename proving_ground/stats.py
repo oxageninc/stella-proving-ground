@@ -226,6 +226,80 @@ def regression_rate(summary: dict[tuple[str, int], ArmEpoch], arm: str) -> list[
     return out
 
 
+def verdict(summary: dict[tuple[str, int], ArmEpoch]) -> dict:
+    """Answer the pre-registered question, using the pre-registered rules.
+
+    The rules were fixed before the first trial ran, so this function is not
+    allowed to be clever. It reads the final epoch's paired contrasts and the
+    treatment arm's trend and maps them onto the falsification conditions from
+    `PREREGISTRATION.md`. "No effect" is a first-class outcome here, not a
+    failure of the experiment.
+    """
+    epochs = sorted({e for (_, e) in summary})
+    if len(epochs) < 2:
+        return {"claim": "undetermined", "reason": "a single epoch proves nothing"}
+
+    last = epochs[-1]
+    t_vs_c = paired(summary, last, "treatment", "control")
+    t_vs_s = paired(summary, last, "treatment", "sham")
+    t_trend = trend(summary, "treatment")
+    c_trend = trend(summary, "control")
+
+    regressions = regression_rate(summary, "treatment")
+    total_regressed = sum(r["regressed"] for r in regressions)
+    total_solved_before = sum(r["solved_before"] for r in regressions)
+
+    # Treatment's movement has to clear the control arm's own drift; control is
+    # the same agent with an empty store, so anything it does too is not memory.
+    control_drift = abs(c_trend.get("delta", 0.0) or 0.0)
+    treatment_delta = t_trend.get("delta", 0.0) or 0.0
+
+    supported = bool(
+        t_vs_c
+        and t_vs_c.meaningful
+        and t_vs_c.delta > 0
+        and t_vs_s
+        and t_vs_s.meaningful
+        and t_vs_s.delta > 0
+    )
+
+    if supported:
+        claim = "supported"
+        reason = (
+            "treatment exceeds both control and sham by more than the "
+            "pre-registered threshold, with CIs excluding zero"
+        )
+    elif t_vs_s and t_vs_c and t_vs_c.meaningful and t_vs_c.delta > 0 and not t_vs_s.meaningful:
+        claim = "not supported — volume, not content"
+        reason = (
+            "treatment beats control but does not separate from sham, so having "
+            "context helped and having the *right* context did not"
+        )
+    else:
+        claim = "not supported — no detectable transfer"
+        reason = (
+            "treatment does not separate from control by more than the "
+            "pre-registered threshold at the final epoch"
+        )
+
+    return {
+        "claim": claim,
+        "reason": reason,
+        "final_epoch": last,
+        "treatment_minus_control": None if not t_vs_c else {
+            "delta": t_vs_c.delta, "ci": [t_vs_c.lo, t_vs_c.hi], "verdict": t_vs_c.verdict()
+        },
+        "treatment_minus_sham": None if not t_vs_s else {
+            "delta": t_vs_s.delta, "ci": [t_vs_s.lo, t_vs_s.hi], "verdict": t_vs_s.verdict()
+        },
+        "treatment_trend": treatment_delta,
+        "control_drift": control_drift,
+        "treatment_clears_control_drift": abs(treatment_delta) > control_drift,
+        "regression_rate": _safe_div(total_regressed, total_solved_before),
+        "regressed_task_instances": total_regressed,
+    }
+
+
 def trend(summary: dict[tuple[str, int], ArmEpoch], arm: str) -> dict:
     """Does accuracy move across the series, and does it clear control's noise?"""
     epochs = sorted(e for (a, e) in summary if a == arm)

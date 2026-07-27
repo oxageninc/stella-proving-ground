@@ -36,11 +36,20 @@ from .config import (
 )
 from .leakage import EpochInvalidated, gate
 from .runner import STORE_DIR, Trial, run_trial
-from .tasks import CORPUS, Task, load_pool
+from .tasks import CORPUS, Task, default_work_root, load_pool
 
 
 @dataclass
 class SeriesPaths:
+    """Where a series keeps its results, and where it keeps its scratch.
+
+    They are deliberately in different places. Results belong in the repository
+    and are committed; workspaces and per-arm stores live *outside* it, because
+    anything under the repo root is reachable by an agent whose project root
+    resolves there — which is how an early run edited the pristine corpus and
+    handed itself a free pass. See `tasks.corpus_digest`.
+    """
+
     root: Path
 
     @property
@@ -52,11 +61,16 @@ class SeriesPaths:
         return self.root / "epochs.jsonl"
 
     @property
+    def scratch(self) -> Path:
+        return default_work_root(self.root.name)
+
+    @property
     def work(self) -> Path:
-        return self.root / "work"
+        return self.scratch / "work"
 
     def ensure(self) -> None:
-        (self.root / "stores").mkdir(parents=True, exist_ok=True)
+        self.root.mkdir(parents=True, exist_ok=True)
+        (self.scratch / "stores").mkdir(parents=True, exist_ok=True)
         self.work.mkdir(parents=True, exist_ok=True)
 
 
@@ -89,7 +103,7 @@ def run_experience_block(
     """
     if not arm.accumulates or not tasks:
         return []
-    store = arm.store(paths.root)
+    store = arm.store(paths.scratch)
     store.mkdir(parents=True, exist_ok=True)
     trials: list[Trial] = []
     for i, task in enumerate(tasks):
@@ -238,7 +252,7 @@ def run_evaluation(
     run concurrently — which is what makes k>=5 affordable.
     """
     tasks = load_pool("evaluation")
-    store = arm.store(paths.root) if arm.seeded_evaluation else None
+    store = arm.store(paths.scratch) if arm.seeded_evaluation else None
     jobs = [(task, i) for task in tasks for i in range(k)]
 
     def one(job) -> Trial:
@@ -294,7 +308,7 @@ def run_series(
 
     selected = [ARMS[name] for name in (arms or list(ARMS))]
     for arm in selected:
-        reset_store(arm, root)
+        reset_store(arm, paths.scratch)
 
     experience = {arm.name: arm.experience_pool() for arm in selected}
     cursor = {arm.name: 0 for arm in selected}
@@ -302,7 +316,7 @@ def run_series(
     for epoch in range(epochs):
         log(f"\n=== epoch {epoch} ===")
         for arm in selected:
-            store = arm.store(root)
+            store = arm.store(paths.scratch)
 
             # The gate runs before scoring, on the store the epoch will use.
             leak = None
@@ -388,14 +402,14 @@ def run_series(
                 trials = run_experience_block(
                     arm, block, epoch=epoch, paths=paths, config=config, log=log
                 )
-                pump_store(arm.store(root), config, log)
+                pump_store(arm.store(paths.scratch), config, log)
                 return trials
 
             with ThreadPoolExecutor(max_workers=max(1, len(selected))) as pool:
                 blocks = list(pool.map(work, selected))
 
             for arm, exp_trials in zip(selected, blocks):
-                stats = store_stats(arm.store(root))
+                stats = store_stats(arm.store(paths.scratch))
                 for trial in exp_trials:
                     row = trial.as_row()
                     row.update(

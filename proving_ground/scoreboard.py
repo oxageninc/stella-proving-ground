@@ -16,6 +16,7 @@ from .stats import (
     regression_rate,
     summarize,
     trend,
+    verdict,
 )
 
 
@@ -49,6 +50,31 @@ def render(results_path: Path) -> str:
         f"verifier. Pre-registered threshold for a result: "
         f"**{MIN_MEANINGFUL_EFFECT:.0%}** absolute, paired, CI excluding zero.\n"
     )
+
+    v = verdict(summary)
+    out.append("\n## Verdict\n")
+    out.append(f"**The claim is {v['claim']}.** {v['reason']}.\n")
+    if v.get("treatment_minus_control"):
+        tc, ts = v["treatment_minus_control"], v.get("treatment_minus_sham")
+        out.append(
+            f"At the final epoch (E{v['final_epoch']}), treatment − control = "
+            f"{_fmt(tc['delta'], '+.3f')} (95% CI [{_fmt(tc['ci'][0], '+.3f')}, "
+            f"{_fmt(tc['ci'][1], '+.3f')}])"
+            + (
+                f"; treatment − sham = {_fmt(ts['delta'], '+.3f')} "
+                f"(95% CI [{_fmt(ts['ci'][0], '+.3f')}, {_fmt(ts['ci'][1], '+.3f')}])."
+                if ts else "."
+            )
+        )
+        out.append(
+            f"\nTreatment moved {_fmt(v['treatment_trend'], '+.3f')} across the "
+            f"series against a control arm that drifted {_fmt(v['control_drift'], '.3f')} "
+            f"on its own — treatment "
+            f"{'clears' if v['treatment_clears_control_drift'] else 'does not clear'} "
+            f"control's own run-to-run movement. Treatment regression rate: "
+            f"{_fmt(v['regression_rate'])} "
+            f"({v['regressed_task_instances']} task-epochs lost).\n"
+        )
 
     out.append("\n## Resolution accuracy (primary)\n")
     out.append("Mean per-task pass rate, with a 95% bootstrap CI over tasks.\n")

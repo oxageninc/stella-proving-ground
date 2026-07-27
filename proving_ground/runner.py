@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .config import PinnedConfig, env_for_run, observed_models, workspace_settings
-from .tasks import Task, materialize, score
+from .tasks import CorpusTampered, Task, corpus_digest, materialize, score
 
 STORE_DIR = Path(".stella") / "private"
 
@@ -113,6 +113,10 @@ def run_trial(
     result = Trial(
         task_id=task.task_id, pool=task.pool, arm=arm, epoch=epoch, trial=trial_index
     )
+    # The agent must not be able to reach the harness. Assert it rather than
+    # trusting it: a trial that edits the pristine corpus would silently hand
+    # every later trial of that task a free pass.
+    before = corpus_digest()
     prepare_workspace(task, workspace, config, store)
 
     started = time.monotonic()
@@ -168,6 +172,14 @@ def run_trial(
                 )
             elif kind == "memory_citation":
                 result.cited_frames += 1
+
+    after = corpus_digest()
+    if after != before:
+        raise CorpusTampered(
+            f"{task.task_id} ({arm} E{epoch}#{trial_index}) modified the pristine "
+            f"corpus: digest {before} -> {after}. Every later trial of this task "
+            f"would inherit the change. The series is void."
+        )
 
     result.passed, result.detail = score(task, workspace, sandbox)
     if learn and store is not None:

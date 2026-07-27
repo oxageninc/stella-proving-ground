@@ -181,7 +181,54 @@ Two consequences for the proving ground:
 
 ---
 
-## 7. The scope gate aborts headless runs having done no work
+## 7. The agent reached the harness — containment is not automatic
+
+**Severity: critical. It voided a whole series, and it was silent.**
+
+This one is the harness's own bug rather than Stella's, but it is worth
+recording because #755 states "the agent cannot reach the harness" as a design
+requirement, and the natural implementation does not satisfy it.
+
+Trial workspaces originally lived at `results/<series>/work/<trial>/` — inside
+this repository. Stella's project discovery walks *up* from the working
+directory to the enclosing repo, so the agent's reachable tree included
+`tasks/corpus/`, `tasks/evaluation/*/verify.py`, and the results themselves.
+
+An agent working the `interest` task wrote its handler into the **pristine
+corpus** at `tasks/corpus/ledgerctl/ledgerctl/commands/interest.py` and
+registered it in the corpus's `registry.py`. Every subsequent trial's
+`materialize` then copied that corpus — implementation included — into the
+fresh workspace, so `eval-03-interest` passed *before the agent did anything*.
+The same happened for `sweep`.
+
+Two things made it dangerous rather than merely annoying:
+
+1. **It looks like success.** The affected tasks went to a 100% pass rate. A
+   contaminated series does not error; it produces the most encouraging
+   possible result.
+2. **It got committed.** A `git add -A` while a trial was in flight captured
+   the agent's `sweep.py` into a harness commit, so the contamination outlived
+   the run that caused it.
+
+It was caught only because the negative control (`no verifier may pass on an
+untouched corpus`) is a standing test rather than a one-off check made while
+writing the verifiers. Had it been a one-off, every number in this repo would
+have been wrong and plausible.
+
+Fixed three ways: workspaces and per-arm stores now live outside the repository
+(`tasks.default_work_root`), the corpus digest is asserted before and after
+every trial (`tasks.corpus_digest`, raising `CorpusTampered`), and
+`test_corpus_is_pristine` fails the suite if a contaminated corpus is ever
+committed.
+
+**The general lesson for anyone building an eval:** an agent's blast radius is
+its *project root*, not its working directory. Putting the harness and the
+workspace in one tree is enough to break isolation, and the failure mode is a
+better-looking number.
+
+---
+
+## 8. The scope gate aborts headless runs having done no work
 
 **Severity: high for any batch harness — it is a large, silent confound.**
 
@@ -213,7 +260,7 @@ without noticing, because the failure looks like a normal unsuccessful turn.
 
 ---
 
-## 8. Reflection records lessons only from turns that went wrong
+## 9. Reflection records lessons only from turns that went wrong
 
 Not a defect, but load-bearing for anyone designing experience curricula. The
 reflection prompt is failure-oriented ("This turn FAILED… identify the root

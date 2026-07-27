@@ -104,3 +104,22 @@ def test_gate_fires_on_a_single_distinctive_string(tmp_path):
     report = scan(_store_with(tmp_path, bodies))
     assert not report.clean
     assert any(h["task_id"] == "eval-02-sweep" for h in report.hits)
+
+
+def test_corpus_is_pristine():
+    """The committed corpus must not contain any pool task's command.
+
+    A trial that edits the corpus hands every later trial of that task a free
+    pass, and the edit survives in git if it lands during a `git add -A`. This
+    is the standing check that it has not happened.
+    """
+    from proving_ground.tasks import CORPUS
+
+    registry = (CORPUS / "ledgerctl" / "registry.py").read_text()
+    handlers = {p.stem for p in (CORPUS / "ledgerctl" / "commands").glob("*.py")}
+    assert handlers == {"__init__", "balance", "deposit", "transfer"}, handlers
+    for task in ALL_TASKS:
+        assert f'"{task.command}"' not in registry, (
+            f"corpus registry contains {task.command!r} — the corpus has been "
+            f"contaminated by a trial"
+        )

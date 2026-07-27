@@ -13,10 +13,12 @@ that cannot read the assertions cannot write code against them.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import shutil
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -43,6 +45,44 @@ class Task:
     def command(self) -> str:
         """The command this task adds — the identifier the leak scan hunts."""
         return self.task_id.split("-", 2)[2]
+
+
+def corpus_digest() -> str:
+    """Hash the pristine corpus, so tampering with it is detectable.
+
+    Learned the hard way. Trial workspaces originally lived inside this
+    repository, and Stella's project-root discovery walks *up* from the working
+    directory to the enclosing repo — which put the task definitions, the
+    verifiers and the pristine corpus inside the agent's reach. An agent
+    working on the `interest` task wrote `interest.py` into
+    `tasks/corpus/ledgerctl/`, where the next trial's `materialize` copied it
+    out again as though it had shipped that way. Every subsequent trial of that
+    task passed for free.
+
+    Workspaces now live outside the repository (see `default_work_root`) and
+    this digest is asserted around every trial, because "the agent cannot reach
+    the harness" is a property that has to be enforced, not assumed.
+    """
+    h = hashlib.sha256()
+    for path in sorted(CORPUS.rglob("*")):
+        if path.is_file() and "__pycache__" not in path.parts:
+            h.update(str(path.relative_to(CORPUS)).encode())
+            h.update(path.read_bytes())
+    return h.hexdigest()[:16]
+
+
+class CorpusTampered(RuntimeError):
+    """The pristine corpus changed during a run. Results are not trustworthy."""
+
+
+def default_work_root(series: str) -> Path:
+    """Where trial workspaces live — deliberately outside this repository.
+
+    Anything inside the repo is reachable by an agent whose project root
+    resolves to the repo, which is every agent whose cwd is a subdirectory of
+    it.
+    """
+    return Path(tempfile.gettempdir()) / "stella-proving-ground-work" / series
 
 
 def load_pool(pool: str) -> list[Task]:
