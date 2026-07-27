@@ -210,6 +210,36 @@ exactly such a caller, which is the upstreamable opportunity #755 anticipated.
 
 ---
 
+## 4b. RETRACTED — "nothing ever cites a recalled memory"
+
+This repo previously reported `cited_frames = 0` in every trial of two full
+series and concluded the attribution loop never fires. **That was a bug in this
+harness, not a finding about Stella.**
+
+The runner counted a `memory_citation` agent event. No such event exists —
+citations are rows in `store.db.memory_citations`. The metric was therefore
+structurally zero and could never have been anything else, which is the worst
+kind of instrument error: it produced a confident number that looked like
+evidence.
+
+Corrected count, read from the store:
+
+```
+series-001/treatment: 1      series-001/sham: 0
+series-002/treatment: 0      series-002/sham: 0
+```
+
+One citation across two series. Still very low, and probably worth
+investigating — but "rare" and "structurally impossible" are different claims,
+and only the first is supported. `runner.count_citations` now reads the store.
+
+The general lesson is the same one as finding 7: a metric nobody has
+negative-controlled is not a measurement. The verifiers here were controlled in
+both directions from the start and caught a real contamination bug; the
+telemetry counters were not, and this one lied for two full series.
+
+---
+
 ## 5. The in-process A/B recall control never fires headlessly
 
 #755 proposes reusing Stella's `maybe_suppress_recall` / `ab_control_turn` as a

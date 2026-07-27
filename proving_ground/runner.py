@@ -20,6 +20,33 @@ from .tasks import CorpusTampered, Task, corpus_digest, materialize, score
 STORE_DIR = Path(".stella") / "private"
 
 
+def count_citations(workspace: Path) -> int:
+    """How many recalled memories the turn actually cited.
+
+    Reads `store.db.memory_citations` rather than the event stream. The stream
+    carries no citation event at all, so an earlier version of this function
+    counted a `memory_citation` type that does not exist and reported zero for
+    every trial in two full series — indistinguishable from a feedback loop
+    that never fires. Measuring the wrong thing is worse than not measuring it,
+    because the number looks real.
+    """
+    db = workspace / STORE_DIR / "store.db"
+    if not db.exists():
+        return 0
+    import sqlite3
+
+    try:
+        con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+    except sqlite3.DatabaseError:
+        return 0
+    try:
+        return con.execute("select count(*) from memory_citations").fetchone()[0]
+    except sqlite3.DatabaseError:
+        return 0
+    finally:
+        con.close()
+
+
 @dataclass
 class Trial:
     task_id: str
@@ -170,8 +197,12 @@ def run_trial(
                 result.recall_methods.extend(
                     f.get("method") for f in frames if f.get("method")
                 )
-            elif kind == "memory_citation":
-                result.cited_frames += 1
+    # Citations are NOT an agent event. Reading them off the stream — which
+    # this harness did at first, counting a `memory_citation` event that does
+    # not exist — makes the count structurally zero and looks exactly like a
+    # broken feedback loop. They are rows in `store.db`, so that is where they
+    # have to be counted from.
+    result.cited_frames = count_citations(workspace)
 
     after = corpus_digest()
     if after != before:
