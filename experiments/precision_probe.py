@@ -13,13 +13,14 @@ This probe settles it by bypassing the lifecycle entirely — no store, no
 recall, no ranking — and hand-delivering context in the prompt. It is not a
 measurement of Stella's memory; it measures the ceiling memory is aiming at.
 
-Three arms, identical in every respect except the block appended to the prompt:
+Four arms — a 2x2 over {facts present?} x {process notes present?} — identical
+in every respect except the block appended to the prompt:
 
     control   nothing appended. What the agent does unaided.
     oracle    the four house conventions the verifiers enforce, and nothing else.
-    diluted   the same four facts, interleaved with eight process memories
-              taken verbatim from a live treatment store (series-002) — the
-              actual output of the mining loop.
+    noise     eight process memories taken verbatim from a live treatment store
+              (series-002) — the actual output of the mining loop — and no facts.
+    diluted   both: the same four facts interleaved with those eight notes.
 
 Holding fact CONTENT constant at oracle quality and varying only what surrounds
 it isolates precision from acquisition:
@@ -45,11 +46,15 @@ Scored at the level of named checks rather than one bit per task. The bootstrap
 resamples TASKS, so n=12 is what decides the width of the interval; k buys
 precision within a task and is deliberately small.
 
-KNOWN LIMITATION: there is no noise-only arm (eight process memories, no
-facts). With one, this would be a clean 2x2 separating "more context changes
-behaviour" from "these particular facts help". Without it, a diluted result
-that lands between control and oracle has two readings. It was cut for budget,
-not because it is uninteresting.
+The `noise` arm was added after the first three ran and produced the result in
+finding 10: diluted beat oracle. That has two readings — the process notes help
+on their own, or they merely dilute a rule the agent was over-applying — and
+only an arm carrying the notes *without* the facts tells them apart.
+
+Run one cell without repaying for the rest with `PROBE_ARMS=noise`. The existing
+rows share this digest and binary so they stay comparable; what it gives up is
+that a later arm is not interleaved with the earlier ones, so provider-side
+drift between invocations lands entirely on the new cell.
 """
 
 from __future__ import annotations
@@ -95,7 +100,16 @@ NOISE = [
     "The agent should be more proactive in diagnosing the cause of a persistent error or loop.",
 ]
 
-ARMS = ("control", "oracle", "diluted")
+#: The full 2x2 over {facts present?} x {process notes present?}.
+#:
+#:     control  neither      noise    notes only
+#:     oracle   facts only   diluted  both
+#:
+#: `noise` is the cell that decides what the first three arms cannot. Diluted
+#: beat oracle, which has two readings — the process notes help on their own, or
+#: they merely dilute a rule the agent was over-applying. Only an arm with the
+#: notes and *without* the facts separates them.
+ARMS = ("control", "oracle", "diluted", "noise")
 
 
 def _fact_line(i: int, body: str) -> str:
@@ -112,6 +126,12 @@ def context_block(arm: str) -> str:
         return ""
     if arm == "oracle":
         lines = [_fact_line(i + 1, f) for i, f in enumerate(FACTS)]
+        return "\nRelevant context:\n" + "\n".join(lines) + "\n"
+    if arm == "noise":
+        # The eight process notes alone. Same ids and same rendering as they
+        # carry inside `diluted`, so the only difference between the two arms is
+        # whether the four facts are interleaved.
+        lines = [_noise_line(i, t) for i, t in enumerate(NOISE)]
         return "\nRelevant context:\n" + "\n".join(lines) + "\n"
     if arm == "diluted":
         # Interleaved, not appended: burying the facts at the end would test
@@ -231,12 +251,17 @@ def main(trials: int = 4, concurrency: int = 10, floor: float = 1.50) -> int:
         keep = set(only.split(","))
         tasks = [t for t in tasks if t.task_id in keep]
 
-    jobs = [(t, arm, i) for t in tasks for arm in ARMS for i in range(trials)]
+    # `PROBE_ARMS=noise` runs one cell without repaying for the others: the
+    # existing rows share this digest and binary, so they remain comparable.
+    # Provider-side drift between the two invocations is the cost of that, and
+    # it is the reason arms are interleaved *within* a run.
+    arms = tuple(os.environ.get("PROBE_ARMS", ",".join(ARMS)).split(","))
+    jobs = [(t, arm, i) for t in tasks for arm in arms for i in range(trials)]
     # Interleave arms so provider-side drift over the run cannot align with an
     # arm. Seeded so the order is reproducible from the log.
     random.Random(20260727).shuffle(jobs)
 
-    print(f"==> precision probe: {len(tasks)} tasks x {len(ARMS)} arms x k={trials} "
+    print(f"==> precision probe: {len(tasks)} tasks x {len(arms)} arms x k={trials} "
           f"= {len(jobs)} trials")
     print(f"    pool digest {config.task_pool_digest}  binary {config.stella_version}")
     rem = credit_remaining()
