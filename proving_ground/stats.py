@@ -100,11 +100,32 @@ def _safe_div(a: float, b: float) -> float:
     return a / b if b else float("nan")
 
 
-def summarize(rows: list[dict]) -> dict[tuple[str, int], ArmEpoch]:
-    """Per arm, per epoch: the pre-registered metric table."""
+def summarize(rows: list[dict], *, require_full_coverage: bool = True) -> dict[tuple[str, int], ArmEpoch]:
+    """Per arm, per epoch: the pre-registered metric table.
+
+    Arm-epochs that do not cover the whole evaluation pool are **dropped, not
+    scored**. A series stopped mid-cell — by a budget guard, a crash, or a
+    human — leaves a partial arm-epoch behind, and averaging it produces a
+    number that looks like the others and is not comparable to them.
+
+    This is not hypothetical: stopping a run during `sham E1` left that cell
+    holding one trial of one task, which scored as a complete arm-epoch and
+    yielded `treatment - sham = -0.800` with a **zero-width** confidence
+    interval, because a bootstrap over a single task resamples the same value
+    every draw. A degenerate CI is the tell, and nothing in the pipeline was
+    looking for it.
+    """
     grouped: dict[tuple[str, int], list[dict]] = defaultdict(list)
     for row in evaluation_rows(rows):
         grouped[(row["arm"], row["epoch"])].append(row)
+
+    if require_full_coverage:
+        expected = {row["task_id"] for row in evaluation_rows(rows)}
+        grouped = {
+            key: trials
+            for key, trials in grouped.items()
+            if {t["task_id"] for t in trials} == expected
+        }
 
     out: dict[tuple[str, int], ArmEpoch] = {}
     for (arm, epoch), trials in sorted(grouped.items()):

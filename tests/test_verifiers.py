@@ -123,3 +123,36 @@ def test_corpus_is_pristine():
             f"corpus registry contains {task.command!r} — the corpus has been "
             f"contaminated by a trial"
         )
+
+
+def test_a_partial_arm_epoch_is_not_scored():
+    """A cell that does not cover the whole pool must be dropped, not averaged.
+
+    A run stopped mid-cell leaves a partial arm-epoch behind. Scored as if it
+    were complete it yields a confident-looking number from almost no data —
+    observed live as `treatment - sham = -0.800` with a zero-width CI, computed
+    from one trial of one task.
+    """
+    from proving_ground.stats import summarize
+
+    rows = []
+    for task in ("a", "b", "c"):
+        for arm in ("treatment", "control"):
+            rows.append(
+                {"pool": "evaluation", "arm": arm, "epoch": 0, "task_id": task,
+                 "passed": True, "input_tokens": 1, "output_tokens": 1,
+                 "model_calls": 1, "cost_usd": 0.0, "wall_clock_s": 1.0,
+                 "recalled_tokens": 0, "recalled_frames": 0, "cited_frames": 0,
+                 "store_stats": {"memories": 0}}
+            )
+    # A partial cell: one arm covers only one of the three tasks.
+    rows.append(
+        {"pool": "evaluation", "arm": "sham", "epoch": 0, "task_id": "a",
+         "passed": False, "input_tokens": 1, "output_tokens": 1,
+         "model_calls": 1, "cost_usd": 0.0, "wall_clock_s": 1.0,
+         "recalled_tokens": 0, "recalled_frames": 0, "cited_frames": 0,
+         "store_stats": {"memories": 0}}
+    )
+    summary = summarize(rows)
+    assert ("treatment", 0) in summary
+    assert ("sham", 0) not in summary, "a partial arm-epoch must not be scored"
