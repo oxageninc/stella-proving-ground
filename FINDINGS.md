@@ -5,8 +5,11 @@ would bite anyone else trying to measure this. Each one is stated with the
 evidence that produced it, because several of them are invisible from the
 outside — they make the lifecycle *appear* to run while producing nothing.
 
-All observations are against Stella `0.5.51` (binary built from `main` at
-`ac5b344b`, v0.5.52), on the headless `stella run` path.
+Observations were made against Stella `0.5.51` (`ac5b344b`) and `0.5.54`
+(`4e1f7d8d`), on the headless `stella run` path. The binary was rebuilt from
+`main` partway through this work; series 001 is pinned to `0.5.54`
+(`binary_sha256` `160d0354cbfe4183`) and every finding below was either observed
+on, or re-confirmed against, that build.
 
 ---
 
@@ -19,14 +22,16 @@ outranks the `--model` flag on the pipeline path. The flag is accepted, no
 warning is emitted, and the JSON envelope's top-level `model` field reports the
 model that was *requested* rather than the one that ran.
 
-Asking for `openrouter/z-ai/glm-4.7-flash` with a global settings file present:
+Re-confirmed on `0.5.54`, the build series 001 is pinned to. Asking for
+`openrouter/z-ai/glm-4.7-flash` with a global settings file present, on a task
+whose entire content is "add a docstring to f in a.py":
 
 ```
 top-level "model" field: openrouter/z-ai/glm-4.7-flash     <- what was asked for
 step_usage[0] role=triage  model=anthropic/claude-haiku-4.5 <- what ran
 step_usage[1] role=worker  model=anthropic/claude-fable-5
 ...
-cost_usd: 0.24109536
+cost_usd: 0.16788   <- for adding one docstring
 ```
 
 With the model actually pinned (via a workspace-local `.stella/settings.json`),
