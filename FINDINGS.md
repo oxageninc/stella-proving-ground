@@ -102,9 +102,70 @@ zero lessons; raise or remove the 512-token cap; and consider a dedicated
 
 ---
 
-## 3. Observations are never extracted on the `stella run` path
+## 3. An untrusted workspace skips the whole mining loop
 
-**Severity: high — the observe phase does not close automatically.**
+**Severity: high — the lifecycle produces nothing in any workspace without project trust.**
+
+> **Corrected.** This finding was first written as "observations are never
+> extracted on the `stella run` path", which was the symptom rather than the
+> cause and would have sent anyone fixing it to the wrong place. The real
+> condition is workspace trust, established while writing the fix
+> ([stella#766](https://github.com/macanderson/stella/pull/766)). The
+> measurements below are unchanged; the diagnosis is.
+
+`SessionMemory::auto_create_skills` opened with an authority gate:
+
+```rust
+if !self.include_workspace_skills {
+    return;
+}
+```
+
+where `include_workspace_skills` is `authority.project_prompts_allowed` — false
+for any workspace without project trust. The comment explains it in terms of
+skill *files*: without the workspace scope the loader is handed an empty skills
+dir, so a skill written there would never be read back.
+
+But the early return also skipped everything upstream of that write:
+attribution (`extract_context_uses`), retirement (`retire_failing_context`),
+observation extraction (`extract_reflection_observations`) and proposal
+induction. None of those touch the workspace skills directory — they write to
+the session's own `.stella/private/context.db`, which the *same function* has
+already written reflection memories to a few lines earlier. So the gate did not
+protect the store; it made the store's contents inconsistent.
+
+The consequence is that in every fresh checkout, every eval sandbox and every
+CI job, reflection mines lessons every turn and they go nowhere:
+
+```
+exp run 0: reflections=1  store={memories:1, episodes:1, context_records:0}
+exp run 1: reflections=2  store={memories:2, episodes:2, context_records:0}
+exp run 2: reflections=2  store={memories:2, episodes:2, context_records:0}
+```
+
+Running the offline command by hand does the extraction immediately, which is
+what originally made this look like a missing call on the run path:
+
+```
+$ stella proposals refresh
+  ✦ 3 new observation(s), 3 observation(s) total, 0 proposal(s) (0 new)
+```
+
+**Fixed** in stella#766: the gate moved onto `write_candidates` and
+`induce_rules` — the two writes it actually describes — so no skill or rule
+file lands in a workspace the session may not read, while the ledger half of
+the lifecycle runs. The pre-existing guarantee
+(`auto_creation_never_writes_into_a_skills_dir_the_session_may_not_read`) still
+passes, and a new test asserts the other half.
+
+This harness still enables `pump_proposals`, because the series is pinned to a
+binary built before the fix.
+
+---
+
+## 3b. Original symptom, retained for the record
+
+**The observe phase does not close automatically on the `stella run` path.**
 
 Even with a model whose reflection parses, lessons accumulate in
 `.stella/private/reflections.jsonl` and are never advanced into
@@ -166,23 +227,30 @@ it. The between-arm control replaces it.
 
 ---
 
-## 6. The lifecycle loop does not close end-to-end on `main`
+## 6. The lifecycle loop did not close end-to-end on `main` — since fixed upstream
+
+> **Corrected.** True when first observed at `ac5b344b`; **no longer true.**
+> Phase 4 merged in the interim and is present at `eeb714dc` (v0.5.57), where
+> `stella-cli/src/memory/uses.rs` exists and its suite runs
+> (`memory::uses::tests::the_loop_closes_a_repeatedly_unhelpful_record_is_retired_and_restorable`,
+> among others). Recorded rather than deleted because the original observation
+> was the basis for saying #755's opening premise did not hold, and a reader
+> comparing against a current checkout deserves to know it now does.
 
 #755 opens by stating that the loop closes end to end (#469: observe → propose
-→ govern → select → attribute → retire). On `main` at `ac5b344b`, the last two
-phases are not present. `ContextUse` and `ContextUseFeedback` record kinds are
-declared (`stella-core/src/context_record/kind.rs:28-29`) and their types
-defined, but nothing outside tests constructs or appends them. Phase 4 (#715 —
-efficacy attribution and reversible retirement) lives in an unmerged worktree.
+→ govern → select → attribute → retire). At `ac5b344b` the last two phases were
+absent: `ContextUse` and `ContextUseFeedback` record kinds were declared
+(`stella-core/src/context_record/kind.rs:28-29`) with their types defined, but
+nothing outside tests constructed or appended them, and Phase 4 (#715) lived in
+an unmerged worktree.
 
-Two consequences for the proving ground:
-
-1. Attribution and retirement cannot be measured yet; only observe → propose →
-   govern → select are live.
-2. The regression-rate risk #755 attributes to Phase 4's retirement ("retiring
-   the wrong record is exactly how you would see it") is **not yet live**. The
-   metric is implemented and reported anyway, so that the baseline exists
-   before retirement lands and the comparison is available the day it does.
+What remains true for series 001 is narrower and worth stating plainly: the
+series is pinned to a binary at `4e1f7d8d`, and **attribution and retirement
+never ran in it**, because finding #3's authority gate skipped
+`extract_context_uses` and `retire_failing_context` in every trial workspace.
+So the regression-rate metric has no retirement to catch in this series. It is
+reported anyway, so the baseline exists for the first series run against a
+binary carrying stella#766.
 
 ---
 
