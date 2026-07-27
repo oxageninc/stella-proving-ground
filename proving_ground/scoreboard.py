@@ -98,6 +98,28 @@ def render(results_path: Path) -> str:
                 cells.append(_fmt(getattr(s, attr), spec) if s else "—")
             out.append(f"| {arm} | " + " | ".join(cells) + " |")
 
+    out.append("\n## Instrument health\n")
+    out.append(
+        "Degenerate trials — ones that produced no work at all — are reported "
+        "separately, because they fail identically to an agent that tried and "
+        "got it wrong. A null result caused by aborted runs is not a null "
+        "result about the lifecycle.\n"
+    )
+    out.append("| arm | epoch | trials | zero-work | non-completed status | mean calls |")
+    out.append("|---|---|---|---|---|---|")
+    eval_rows = [r for r in rows if r.get("pool") == "evaluation"]
+    for arm in arms:
+        for e in epochs:
+            trials = [r for r in eval_rows if r["arm"] == arm and r["epoch"] == e]
+            if not trials:
+                continue
+            zero = sum(1 for t in trials if t.get("model_calls", 0) <= 2)
+            bad = sum(1 for t in trials if t.get("status") not in ("completed", ""))
+            calls = sum(t.get("model_calls", 0) for t in trials) / len(trials)
+            out.append(
+                f"| {arm} | E{e} | {len(trials)} | {zero} | {bad} | {calls:.1f} |"
+            )
+
     out.append("\n## Regression rate\n")
     out.append(
         "Tasks solved at epoch *N* that fail at *N+1*. A system can learn "

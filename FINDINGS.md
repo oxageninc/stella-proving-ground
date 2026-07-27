@@ -181,7 +181,39 @@ Two consequences for the proving ground:
 
 ---
 
-## 7. Reflection records lessons only from turns that went wrong
+## 7. The scope gate aborts headless runs having done no work
+
+**Severity: high for any batch harness — it is a large, silent confound.**
+
+A plan of more than five steps triggers scope review. A headless run has nobody
+to approve it, so the turn aborts before executing anything:
+
+```
+status = error, model_calls = 2, cost = $0.00011, wall = 3.3s
+"scope review is required for this plan, but the run is headless without an
+ approval bypass — re-run interactively or enable the scope-review bypass"
+```
+
+The workspace is untouched, so the task scores as a clean failure and is
+indistinguishable in the results from an agent that tried and got it wrong.
+Left unaddressed, resolution accuracy would substantially be measuring *how
+often the planner emitted more than five steps* rather than whether the agent
+could do the task — and any arm that changed planning verbosity would move the
+headline metric for a reason that has nothing to do with knowledge.
+
+`headless_scope_bypass: "on"` under `agent_engine_config` disables the gate; the
+documented condition for using it is a disposable working tree, which is
+exactly what every trial here has. It is set, and recorded in the pinned config
+so a reader knows which regime the series ran in.
+
+Worth noting the gate's threshold is *five steps*, which is low enough that
+ordinary multi-file tasks cross it routinely. Anyone running Stella
+non-interactively at all — CI, batch, cron — is likely losing runs to this
+without noticing, because the failure looks like a normal unsuccessful turn.
+
+---
+
+## 8. Reflection records lessons only from turns that went wrong
 
 Not a defect, but load-bearing for anyone designing experience curricula. The
 reflection prompt is failure-oriented ("This turn FAILED… identify the root
