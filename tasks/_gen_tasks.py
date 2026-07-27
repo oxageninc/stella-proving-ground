@@ -239,10 +239,10 @@ EXPERIENCE = [
      {"alice": 10015, "bob": 0}, [], line(["close", "--account", "bob"], "closed bob", gone("bob")),
      ["close", "--account", "alice"], []),
     ("exp-04-list", "list",
-     f"`ledgerctl list` prints every account name and formatted balance on one line, sorted by\nname, joined by `, ` — for the starting ledger exactly `alice {fmt(10015)}, bob {fmt(2537)}`.",
+     "`ledgerctl list` prints every account name and formatted balance on one line, sorted by\nname, joined by `, ` — a ledger of two accounts holding 3.50 and 1.25 prints exactly\n`alice 3.50, bob 1.25`.",
      BASE, [], line(["list"], f"alice {fmt(10015)}, bob {fmt(2537)}"), None, None),
     ("exp-05-total", "total",
-     f"`ledgerctl total` prints the sum of every balance as exactly `total {fmt(12552)}`.",
+     "`ledgerctl total` prints the sum of every balance as `total <amount>` — a ledger holding\n3.50 in all prints exactly `total 3.50`.",
      BASE, [], line(["total"], f"total {fmt(12552)}"), None, None),
     ("exp-06-fee", "fee",
      f"`ledgerctl fee --account alice --amount {TRAP_201}` debits a service fee and prints exactly\n`charged {TRAP_201} fee to alice`. Record a journal entry with `\"type\": \"fee\"`.\nA fee larger than the balance must fail cleanly.",
@@ -256,7 +256,7 @@ EXPERIENCE = [
                     bal("robert", 2537) + "\n" + gone("bob")),
      ["rename", "--from", "nobody", "--to", "x"], []),
     ("exp-08-count", "count",
-     "`ledgerctl count` prints the number of accounts as exactly `accounts 2`.",
+     "`ledgerctl count` prints the number of accounts as `accounts <n>` — a ledger of five\naccounts prints exactly `accounts 5`.",
      BASE, [], line(["count"], "accounts 2"), None, None),
     ("exp-09-zero", "zero",
      "`ledgerctl zero --account alice` sets a balance to zero and prints exactly `zeroed alice`.\nRecord a journal entry with `\"type\": \"zero\"` whose `amount` is the balance removed.\nA missing account must fail cleanly.",
@@ -274,11 +274,26 @@ EXPERIENCE = [
 # --------------------------------------------------------------------------
 # EVALUATION POOL — held out. Measured, never learned from.
 #
-# Every money task here is now decided by the minor-units convention rather
-# than merely checked for it: the amounts do not survive `float`, and the
-# percentages leave a real fraction of a cent to discard. Before this, control
-# scored 0.950 on checks with five tasks perfect in every arm — no treatment
-# could have shown an effect, because there was nowhere for the score to go.
+# Every money task is decided by the minor-units convention rather than merely
+# checked for it: the amounts do not survive `float`, and the percentages leave
+# a real fraction of a cent to discard.
+#
+# ## Specs show the FORMAT with an example that is not the answer
+#
+# The first attempt at this raised the arithmetic difficulty and simultaneously
+# *lowered* the task difficulty, because each spec stated the exact expected
+# output — and for a computed field that string IS the answer. Telling the agent
+# it must print `collected 7.01 tax from alice` removes any need to work out
+# that 7% of 100.15 floors to 701 minor units. Measured: control went 0.792 ->
+# 0.771 while tasks at a perfect score went 5/12 -> 8/12.
+#
+# So every worked example below uses numbers that are deliberately NOT the
+# seeded case. The format stays pinned exactly — a task should never fail
+# because the agent guessed a separator — while the value has to be computed.
+#
+# `interest` was the accidental control for this: it was the one task whose
+# second value was never stated, and it is the one that kept failing, with the
+# float leaking straight into the output (`credited 500.75 interest to alice`).
 # --------------------------------------------------------------------------
 
 EVALUATION = [
@@ -289,12 +304,12 @@ EVALUATION = [
          bal("alice", 10015 - 115 - 115) + "\n" + journal_count("refund", 2)),
      ["refund", "--account", "bob", "--amount", "999.00"], []),
     ("eval-02-sweep", "sweep",
-     f"`ledgerctl sweep --from alice --to bob` moves the entire balance of one account into\nanother, leaving the source at zero, and prints exactly `swept {fmt(10015)} from alice to bob`.\nRecord a journal entry with `\"type\": \"sweep\"`. A missing account must fail cleanly.",
+     "`ledgerctl sweep --from alice --to bob` moves the entire balance of one account into\nanother, leaving the source at zero. It prints `swept <amount> from <source> to <target>` —\nsweeping a source that holds 3.50 prints exactly `swept 3.50 from alice to bob`.\nRecord a journal entry with `\"type\": \"sweep\"`. A missing account must fail cleanly.",
      BASE, [], line(["sweep", "--from", "alice", "--to", "bob"], f"swept {fmt(10015)} from alice to bob",
                     bal("alice", 0) + "\n" + bal("bob", 12552) + "\n" + journal_has("sweep")),
      ["sweep", "--from", "nobody", "--to", "bob"], []),
     ("eval-03-interest", "interest",
-     f"`ledgerctl interest --account alice --rate 5` credits 5 percent of the current balance and\nprints exactly `credited {fmt(500)} interest to alice` the first time. Record a journal entry with\n`\"type\": \"interest\"`. Any fraction of a cent is discarded (round down), and interest\ncompounds — a second call charges 5 percent of the new balance.\nA missing account must fail cleanly.",
+     "`ledgerctl interest --account alice --rate 5` credits 5 percent of the current balance.\nIt prints `credited <amount> interest to <account>` — crediting 2.00 prints exactly\n`credited 2.00 interest to alice`. Any fraction of a cent is discarded (round down), and\ninterest compounds: a second call charges the rate against the new balance.\nRecord a journal entry with `\"type\": \"interest\"`. A missing account must fail cleanly.",
      BASE, [],
      seq([(["interest", "--account", "alice", "--rate", "5"], f"credited {fmt(500)} interest to alice"),
           (["interest", "--account", "alice", "--rate", "5"], f"credited {fmt(525)} interest to alice")],
@@ -308,7 +323,7 @@ EVALUATION = [
           bal("alice", 10015 - 201) + "\n" + bal("bob", 2537 + 101) + "\n" + bal("carol", 100) + "\n" + journal_has("split")),
      ["split", "--from", "alice", "--to", "nobody", "--amount", "1.00"], []),
     ("eval-05-statement", "statement",
-     f"`ledgerctl statement --account alice` prints the balance and how many journal entries\nmention it, as exactly `alice {fmt(10015)} (2 entries)`. An entry mentions an account if any of\nits values equals the account name. A missing account must fail cleanly.",
+     "`ledgerctl statement --account alice` prints the balance and how many journal entries\nmention it, as `<account> <balance> (<n> entries)` — an account holding 3.50 named in 4\nentries prints exactly `alice 3.50 (4 entries)`. An entry mentions an account if any of its\nvalues equals the account name. A missing account must fail cleanly.",
      BASE, [{"type": "deposit", "account": "alice", "amount": 1015},
             {"type": "transfer", "from": "alice", "to": "bob", "amount": 50},
             {"type": "deposit", "account": "bob", "amount": 25}],
@@ -320,34 +335,34 @@ EVALUATION = [
                     bal("alice", 12552) + "\n" + gone("bob") + "\n" + journal_has("merge")),
      ["merge", "--from", "nobody", "--to", "alice"], []),
     ("eval-07-tax", "tax",
-     f"`ledgerctl tax --account alice --rate 7` debits 7 percent of the balance as tax and prints\nexactly `collected {fmt(701)} tax from alice` the first time. Record a journal entry with\n`\"type\": \"tax\"`. Any fraction of a cent is discarded (round down), and a second call taxes\nthe reduced balance. A missing account must fail cleanly.",
+     "`ledgerctl tax --account alice --rate 7` debits 7 percent of the balance as tax.\nIt prints `collected <amount> tax from <account>` — collecting 2.00 prints exactly\n`collected 2.00 tax from alice`. Any fraction of a cent is discarded (round down), and a\nsecond call taxes the reduced balance. Record a journal entry with `\"type\": \"tax\"`.\nA missing account must fail cleanly.",
      BASE, [],
      seq([(["tax", "--account", "alice", "--rate", "7"], f"collected {fmt(701)} tax from alice"),
           (["tax", "--account", "alice", "--rate", "7"], f"collected {fmt(651)} tax from alice")],
          bal("alice", 10015 - 701 - 651) + "\n" + journal_count("tax", 2)),
      ["tax", "--account", "nobody", "--rate", "7"], []),
     ("eval-08-installments", "installments",
-     f"`ledgerctl installments --account bob --amount {TRAP_230} --count 3` divides the amount into 3\nparts as evenly as possible in minor units, giving any remainder to the FIRST installment, and\nprints exactly `3 installments of {fmt(78)}, {fmt(76)}, {fmt(76)}`. It changes no balance.\nA count of zero must fail cleanly.",
+     f"`ledgerctl installments --account bob --amount {TRAP_230} --count 3` divides the amount into\nthat many parts as evenly as possible in minor units, giving any remainder to the FIRST\ninstallment. It prints `<count> installments of <a>, <b>, ...` — dividing 1.01 into 2 prints\nexactly `2 installments of 0.51, 0.50`. It changes no balance.\nA count of zero must fail cleanly.",
      BASE, [], line(["installments", "--account", "bob", "--amount", TRAP_230, "--count", "3"],
                     f"3 installments of {fmt(78)}, {fmt(76)}, {fmt(76)}", bal("bob", 2537)),
      ["installments", "--account", "bob", "--amount", TRAP_230, "--count", "0"], []),
     ("eval-09-reconcile", "reconcile",
-     f"`ledgerctl reconcile` sums every journal entry's `amount` and prints exactly\n`journal {fmt(1752)} across 3 entries` for a ledger whose entries total 1752 minor units.\nAn entry without an `amount` counts toward the entry total but adds nothing to the sum.",
+     "`ledgerctl reconcile` sums every journal entry's `amount` and prints\n`journal <total> across <n> entries` — entries totalling 3.50 across 4 of them print exactly\n`journal 3.50 across 4 entries`. An entry without an `amount` counts toward the entry total\nbut adds nothing to the sum.",
      BASE, [{"type": "deposit", "account": "alice", "amount": 1015},
             {"type": "fee", "account": "bob", "amount": 737},
             {"type": "note", "account": "alice"}],
      line(["reconcile"], f"journal {fmt(1752)} across 3 entries"), None, None),
     ("eval-10-cap", "cap",
-     f"`ledgerctl cap --account alice --max 50.00` reduces a balance to the cap when it exceeds it,\nrecords a journal entry with `\"type\": \"cap\"` whose `amount` is the amount removed, and prints\nexactly `capped alice at 50.00, removed {fmt(5015)}`. A missing account must fail cleanly.",
+     "`ledgerctl cap --account alice --max 50.00` reduces a balance to the cap when it exceeds it\nand records a journal entry with `\"type\": \"cap\"` whose `amount` is the amount removed.\nIt prints `capped <account> at <max>, removed <amount>` — capping a 9.00 balance at 4.00\nprints exactly `capped alice at 4.00, removed 5.00`. A missing account must fail cleanly.",
      BASE, [], line(["cap", "--account", "alice", "--max", "50.00"], f"capped alice at 50.00, removed {fmt(5015)}",
                     bal("alice", 5000) + "\n" + journal_has("cap")),
      ["cap", "--account", "nobody", "--max", "1.00"], []),
     ("eval-11-share", "share",
-     f"`ledgerctl share --account alice` prints the account's share of all money as a whole-number\npercentage, rounded down, as exactly `alice holds {10015 * 100 // 12552}% of {fmt(12552)}`.\nA missing account must fail cleanly.",
+     "`ledgerctl share --account alice` prints the account's share of the total held across ALL\naccounts, as a whole-number percentage rounded down: `<account> holds <p>% of <total>`.\nAn account holding 1.00 of a 4.00 total prints exactly `alice holds 25% of 4.00`.\nA missing account must fail cleanly.",
      BASE, [], line(["share", "--account", "alice"], f"alice holds {10015 * 100 // 12552}% of {fmt(12552)}"),
      ["share", "--account", "nobody"], []),
     ("eval-12-largest", "largest",
-     f"`ledgerctl largest` prints the account with the highest balance as exactly `alice {fmt(10015)}`.\nTies break alphabetically.",
+     "`ledgerctl largest` prints the account with the highest balance as `<account> <balance>` —\nfor a top account holding 3.50 that is exactly `bob 3.50`. Ties break alphabetically.",
      BASE, [], line(["largest"], f"alice {fmt(10015)}"), None, None),
 ]
 

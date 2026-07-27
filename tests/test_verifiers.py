@@ -195,3 +195,33 @@ def test_a_float_implementation_is_now_punished(tmp_path):
         "assert_minor_units only checks the stored type, so it passes here — "
         "which is exactly why the arithmetic has to be what catches this"
     )
+
+
+@pytest.mark.parametrize("task", load_pool("evaluation"), ids=lambda t: t.task_id)
+def test_a_prompt_never_states_the_seeded_answer(task):
+    """A spec must pin the output FORMAT without handing over the VALUE.
+
+    This is a guard against a mistake already made once. Raising the arithmetic
+    difficulty while writing the computed result into the spec — "prints exactly
+    `collected 7.01 tax from alice`" — lowers the task instead of raising it,
+    because 7.01 *is* the answer to "7 percent of 100.15, floored". Measured:
+    control 0.792 -> 0.771 and tasks at a perfect score 5/12 -> 8/12.
+
+    So no evaluation prompt may contain the rendered form of a seeded balance,
+    or of the total across them. Worked examples must use numbers that are not
+    the case under test.
+    """
+    accounts = task.setup.get("accounts", {})
+    if not accounts:
+        pytest.skip("no seeded balances")
+
+    def fmt(minor: int) -> str:
+        return f"{minor // 100}.{minor % 100:02d}"
+
+    forbidden = {fmt(v) for v in accounts.values() if v}
+    forbidden.add(fmt(sum(accounts.values())))
+    leaked = sorted(f for f in forbidden if f in task.prompt)
+    assert not leaked, (
+        f"{task.task_id} states seeded value(s) {leaked} in its prompt — the "
+        f"agent can print the answer without computing it"
+    )
