@@ -10,9 +10,15 @@ from __future__ import annotations
 from pathlib import Path
 
 from .stats import (
+    CONTINUOUS_OUTCOMES,
+    CONTRAST_PAIRS,
+    EFFORT_OUTCOMES,
     MIN_MEANINGFUL_EFFECT,
+    STEERING_OUTCOME,
+    family_wise_error,
     load_results,
     paired,
+    paired_outcome,
     regression_rate,
     summarize,
     trend,
@@ -50,10 +56,24 @@ def render(results_path: Path) -> str:
         f"verifier. Pre-registered threshold for a result: "
         f"**{MIN_MEANINGFUL_EFFECT:.0%}** absolute, paired, CI excluding zero.\n"
     )
+    out.append(
+        "Reported beside it, and **exploratory rather than pre-registered**: "
+        "effort per trial and how often the agent had to be steered. Finding 12 "
+        "showed pass rate saturating on this pool while effort did not — an "
+        "agent that always succeeds can still take 19 turns or 93 — so a "
+        "scoreboard that reads only the accuracy row is blind to most of the "
+        "signal it paid for.\n"
+    )
 
     v = verdict(summary)
+    cont = v.get("continuous") or {}
     out.append("\n## Verdict\n")
-    out.append(f"**The claim is {v['claim']}.** {v['reason']}.\n")
+    out.append(f"**Accuracy (pre-registered): the claim is {v['claim']}.** {v['reason']}.\n")
+    if cont.get("claim"):
+        out.append(
+            f"\n**Effort and steering (exploratory): {cont['claim']}.** "
+            f"Detail in *Effort* and *Steering* below.\n"
+        )
     if v.get("treatment_minus_control"):
         tc, ts = v["treatment_minus_control"], v.get("treatment_minus_sham")
         out.append(
@@ -112,6 +132,112 @@ def render(results_path: Path) -> str:
             )
         out.append(f"| **{arm}** | " + " | ".join(cells) + " |")
 
+    out.append("\n## Effort per trial (completed trials only)\n")
+    out.append(
+        "What the answer cost, per trial — **not** per solved task. The "
+        "`*_per_solved` tables further down divide by the number of passes, so "
+        "they move when accuracy moves and read as an efficiency change that "
+        "never happened. These are the raw per-trial means.\n\n"
+        "Restricted to trials with `status == completed`. An abort truncates a "
+        "run, so a trial that gave up at step 12 records less effort than one "
+        "that worked honestly to step 60 — including aborts would reward "
+        "whichever arm quits more. The arms differ on abort rate, and that is "
+        "reported separately under *Instrument health* rather than smuggled in "
+        "here.\n"
+    )
+    for o in EFFORT_OUTCOMES:
+        out.append(f"\n**{o.label}** — lower is better\n")
+        out.append("| arm | " + " | ".join(f"E{e}" for e in epochs) + " |")
+        out.append("|---|" + "---|" * len(epochs))
+        for arm in arms:
+            cells = []
+            for e in epochs:
+                s = summary.get((arm, e))
+                cells.append(
+                    _fmt(s.outcome_mean.get(o.key, float("nan")), o.fmt) if s else "—"
+                )
+            out.append(f"| {arm} | " + " | ".join(cells) + " |")
+
+    out.append("\n### Trials contributing to the effort numbers\n")
+    out.append(
+        "`completed / total`. An effort mean resting on a handful of surviving "
+        "trials is not the same measurement as one resting on all of them.\n"
+    )
+    out.append("| arm | " + " | ".join(f"E{e}" for e in epochs) + " |")
+    out.append("|---|" + "---|" * len(epochs))
+    for arm in arms:
+        cells = []
+        for e in epochs:
+            s = summary.get((arm, e))
+            cells.append(f"{s.completed}/{s.trials}" if s else "—")
+        out.append(f"| {arm} | " + " | ".join(cells) + " |")
+
+    out.append(f"\n## Steering — {STEERING_OUTCOME.label} (all trials)\n")
+    out.append(
+        "Share of trials whose run ended with the harness's own *stuck-loop* "
+        "warning: the agent was told it was looping and looped anyway. These "
+        "are one-shot headless trials, so nobody is there to intervene — this "
+        "is the closest proxy the design has for *a human had to step in*.\n\n"
+        "Scored over **all** trials, unlike effort. Looping is only observable "
+        "on runs that went wrong, so filtering to completed trials would define "
+        "the outcome out of existence.\n"
+    )
+    out.append("| arm | " + " | ".join(f"E{e}" for e in epochs) + " |")
+    out.append("|---|" + "---|" * len(epochs))
+    for arm in arms:
+        cells = []
+        for e in epochs:
+            s = summary.get((arm, e))
+            cells.append(
+                _fmt(s.outcome_mean.get(STEERING_OUTCOME.key, float("nan")), ".3f")
+                if s else "—"
+            )
+        out.append(f"| {arm} | " + " | ".join(cells) + " |")
+
+    out.append("\n## Paired contrasts on effort and steering\n")
+    out.append(
+        "Same task, same epoch, arm minus arm, bootstrapped over tasks — the "
+        "identical machinery the accuracy contrast uses. Negative favours the "
+        "first arm on every row: these outcomes are all costs.\n\n"
+        "`rel` is the delta as a share of the second arm's mean over the same "
+        "shared tasks. No threshold is applied: none was pre-registered for "
+        "these axes, and choosing one now, after seeing the probe, would be "
+        "choosing it knowing the answer.\n"
+    )
+    out.append("| epoch | comparison | outcome | delta | 95% CI | rel | n tasks | verdict |")
+    out.append("|---|---|---|---|---|---|---|---|")
+    n_continuous = 0
+    for e in epochs:
+        for a, b in CONTRAST_PAIRS:
+            for o in CONTINUOUS_OUTCOMES:
+                c = paired_outcome(summary, e, a, b, o.key)
+                if not c:
+                    continue
+                n_continuous += 1
+                rel = c.relative
+                out.append(
+                    f"| E{e} | {a} − {b} | {o.label} | {_fmt(c.delta, '+' + o.fmt)} | "
+                    f"[{_fmt(c.lo, '+' + o.fmt)}, {_fmt(c.hi, '+' + o.fmt)}] | "
+                    f"{('—' if rel != rel else format(rel, '+.1%'))} | {c.n_tasks} | "
+                    f"{c.verdict()} |"
+                )
+
+    n_accuracy = sum(
+        1 for e in epochs for a, b in CONTRAST_PAIRS if paired(summary, e, a, b)
+    )
+    total = n_accuracy + n_continuous
+    out.append(
+        f"\n> **{total} contrasts are computed on this page** "
+        f"({n_accuracy} on accuracy, {n_continuous} on effort and steering). At "
+        f"alpha = 0.05 the family-wise error rate is "
+        f"**~{family_wise_error(total):.0%}** — several intervals excluding zero "
+        f"by chance alone is the expectation, not the exception. More contrasts "
+        f"have already been run across findings 10–12, so the true family is "
+        f"larger than this page. What earns confidence is not one interval but "
+        f"independent measures agreeing in direction and size on the same arm, "
+        f"and then replicating. Read this table that way.\n"
+    )
+
     out.append("\n## Store growth\n")
     out.append(
         "Memories carried into each epoch's evaluation. The sham arm must stay "
@@ -126,6 +252,14 @@ def render(results_path: Path) -> str:
         ]
         out.append(f"| {arm} | " + " | ".join(cells) + " |")
 
+    out.append("\n## Per-solved-task ratios (kept for continuity — read with care)\n")
+    out.append(
+        "These divide total effort by the number of *passes*, so they conflate "
+        "effort with correctness: an arm that solves one more task looks more "
+        "efficient without having changed how it works. The per-trial tables "
+        "above are the ones to read for effort. Retained because series 001 and "
+        "002 were published on them.\n"
+    )
     for title, attr, spec in (
         ("Token efficiency — tokens per solved task", "tokens_per_solved", ".0f"),
         ("Cost — USD per solved task", "cost_per_solved", ".4f"),
@@ -210,7 +344,7 @@ def render(results_path: Path) -> str:
                 f"{', '.join(r['tasks']) or '—'} |"
             )
 
-    out.append("\n## Paired comparisons\n")
+    out.append("\n## Paired comparisons — accuracy (primary)\n")
     out.append(
         "Same task, same epoch, arm minus arm. Pairing on task has far more "
         "power than comparing pool means.\n"
@@ -218,7 +352,7 @@ def render(results_path: Path) -> str:
     out.append("| epoch | comparison | delta | 95% CI | verdict |")
     out.append("|---|---|---|---|---|")
     for e in epochs:
-        for a, b in (("treatment", "control"), ("treatment", "sham"), ("sham", "control")):
+        for a, b in CONTRAST_PAIRS:
             c = paired(summary, e, a, b)
             if c:
                 out.append(

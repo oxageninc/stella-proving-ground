@@ -12,6 +12,15 @@ Three commitments, all of which cost the harness its ability to flatter itself:
   run-to-run variance is not an improvement.
 
 The bootstrap is seeded so a published number can be reproduced exactly.
+
+**Correctness is not the only outcome** (finding 12). Scoring one bit per trial
+concluded "context did not help" while the same 192 trials showed the context
+arm using a quarter fewer model calls, a third less money, and never once
+needing to be steered. Pass rate *saturates* on this pool — control scores 0.95
+on checks and five of twelve tasks are perfect in every arm — while effort does
+not: an agent that always succeeds can still take 19 turns or 93. So the
+continuous outcomes are computed here as first-class results beside accuracy,
+not dug out of failure diagnostics afterwards.
 """
 
 from __future__ import annotations
@@ -19,9 +28,10 @@ from __future__ import annotations
 import json
 import random
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from statistics import median
+from typing import Callable
 
 BOOTSTRAP_SEED = 20260726
 BOOTSTRAP_DRAWS = 10000
@@ -30,6 +40,63 @@ BOOTSTRAP_DRAWS = 10000
 #: resolution accuracy that counts as a result. Below this, we report no effect
 #: regardless of what the point estimate does.
 MIN_MEANINGFUL_EFFECT = 0.10
+
+
+@dataclass(frozen=True)
+class Outcome:
+    """One scored axis.
+
+    `completed_only` is the load-bearing field. An abort truncates a run, so a
+    trial that gave up at step 12 records less effort than one that worked
+    honestly to step 60 — including aborts in an effort contrast therefore
+    *rewards* whichever arm quits more. The arms differ a lot on abort rate
+    (series 001: 33% of trials aborted, against 15% in the probe), which is a
+    result in its own right and is reported separately rather than smuggled
+    into the effort numbers.
+
+    Steering is the exception and is scored over **all** trials: "the agent was
+    warned and looped anyway" is only observable on runs that went wrong, so
+    restricting it to completed trials would define the outcome out of
+    existence.
+    """
+
+    key: str
+    label: str
+    extract: Callable[[dict], float]
+    completed_only: bool
+    fmt: str = ".3f"
+    #: Direction help points in. Every continuous outcome here is a cost.
+    lower_is_better: bool = True
+
+
+def _stuck_loop(row: dict) -> float:
+    """The harness's own 'warned, then looped anyway' signal.
+
+    The closest proxy this design has for "a human had to intervene": these are
+    one-shot headless trials, so nobody is there to intervene, but Stella emits
+    a steering warning and the trial records whether the agent carried on
+    looping regardless.
+    """
+    return float("stuck-loop" in (row.get("stella_error") or ""))
+
+
+#: Effort per **trial** — deliberately not the `*_per_solved` fields, which
+#: divide by the number of passes and so conflate effort with correctness. When
+#: pass rate is saturated the denominator is nearly constant and the two agree;
+#: when it is not, `cost_per_solved` moves because accuracy moved, and reads as
+#: an efficiency change that never happened.
+EFFORT_OUTCOMES: tuple[Outcome, ...] = (
+    Outcome("model_calls", "model calls", lambda r: float(r.get("model_calls") or 0), True, ".1f"),
+    Outcome("cost_usd", "cost (USD)", lambda r: float(r.get("cost_usd") or 0.0), True, ".4f"),
+    Outcome("output_tokens", "output tokens", lambda r: float(r.get("output_tokens") or 0), True, ".0f"),
+)
+
+STEERING_OUTCOME = Outcome("stuck_loop", "stuck-loop rate", _stuck_loop, False, ".3f")
+
+#: Everything scored beside accuracy.
+CONTINUOUS_OUTCOMES: tuple[Outcome, ...] = EFFORT_OUTCOMES + (STEERING_OUTCOME,)
+
+OUTCOMES_BY_KEY: dict[str, Outcome] = {o.key: o for o in CONTINUOUS_OUTCOMES}
 
 
 def load_results(path: Path) -> list[dict]:
@@ -94,10 +161,38 @@ class ArmEpoch:
     recalled_tokens_per_call: float
     cited_share: float
     store_memories: int
+    #: outcome key -> {task_id: mean over that task's eligible trials}. The unit
+    #: the bootstrap resamples, for every continuous outcome.
+    per_task_outcome: dict[str, dict[str, float]] = field(default_factory=dict)
+    #: outcome key -> mean over eligible trials, pooled. Reported, never
+    #: resampled: the task is the unit of replication.
+    outcome_mean: dict[str, float] = field(default_factory=dict)
+    #: How many trials survived the `completed` filter, so a reader can see when
+    #: an effort number rests on very little.
+    completed: int = 0
+    aborted: int = 0
 
 
 def _safe_div(a: float, b: float) -> float:
     return a / b if b else float("nan")
+
+
+def _eligible(trials: list[dict], outcome: Outcome) -> list[dict]:
+    if not outcome.completed_only:
+        return trials
+    return [t for t in trials if t.get("status") == "completed"]
+
+
+def per_task_outcome(trials: list[dict], outcome: Outcome) -> dict[str, float]:
+    """Mean of `outcome` per task over the trials it is eligible to score.
+
+    A task with no eligible trials is **absent** rather than NaN, so a paired
+    contrast drops it from both arms instead of poisoning the mean.
+    """
+    acc: dict[str, list[float]] = defaultdict(list)
+    for t in _eligible(trials, outcome):
+        acc[t["task_id"]].append(outcome.extract(t))
+    return {task: _mean(vals) for task, vals in sorted(acc.items()) if vals}
 
 
 def summarize(rows: list[dict], *, require_full_coverage: bool = True) -> dict[tuple[str, int], ArmEpoch]:
@@ -166,6 +261,15 @@ def summarize(rows: list[dict], *, require_full_coverage: bool = True) -> dict[t
             store_memories=max(
                 (t.get("store_stats", {}) or {}).get("memories", 0) for t in trials
             ),
+            per_task_outcome={
+                o.key: per_task_outcome(trials, o) for o in CONTINUOUS_OUTCOMES
+            },
+            outcome_mean={
+                o.key: _mean([o.extract(t) for t in _eligible(trials, o)])
+                for o in CONTINUOUS_OUTCOMES
+            },
+            completed=sum(1 for t in trials if t.get("status") == "completed"),
+            aborted=sum(1 for t in trials if t.get("status") not in ("completed", "")),
         )
     return out
 
@@ -186,8 +290,28 @@ class PairedComparison:
     hi: float
     significant: bool
     meaningful: bool
+    #: Which axis this contrast is on. "accuracy" is the pre-registered primary.
+    outcome: str = "accuracy"
+    #: arm_b's mean over the same shared tasks, so a delta can be read as a
+    #: percentage of the baseline it is a change from.
+    baseline: float = float("nan")
+    n_tasks: int = 0
+
+    @property
+    def relative(self) -> float:
+        """Delta as a share of the baseline arm, or NaN when the baseline is 0."""
+        if self.baseline != self.baseline or not self.baseline:
+            return float("nan")
+        return self.delta / self.baseline
 
     def verdict(self) -> str:
+        if self.outcome != "accuracy":
+            # No threshold was pre-registered for the continuous outcomes, and
+            # inventing one after seeing the probe's numbers would be exactly
+            # the move this repo exists to avoid. Report separation and size.
+            if not self.significant:
+                return "within noise (CI spans zero)"
+            return "CI excludes zero"
         if not self.significant:
             return "no detectable difference (CI spans zero)"
         if not self.meaningful:
@@ -195,16 +319,24 @@ class PairedComparison:
         return "difference exceeds the pre-registered threshold"
 
 
-def paired(
-    summary: dict[tuple[str, int], ArmEpoch], epoch: int, arm_a: str, arm_b: str
+def _paired_from_maps(
+    a_map: dict[str, float],
+    b_map: dict[str, float],
+    *,
+    epoch: int,
+    arm_a: str,
+    arm_b: str,
+    outcome: str,
 ) -> PairedComparison | None:
-    """Paired per-task difference arm_a - arm_b at one epoch."""
-    a = summary.get((arm_a, epoch))
-    b = summary.get((arm_b, epoch))
-    if not a or not b:
+    """Bootstrap the paired per-task delta between two per-task maps.
+
+    Pairing happens on the **intersection**: a task the completed-trial filter
+    emptied in one arm is dropped from both, never treated as zero.
+    """
+    tasks = sorted(set(a_map) & set(b_map))
+    if not tasks:
         return None
-    tasks = sorted(set(a.per_task_rate) & set(b.per_task_rate))
-    deltas = {t: a.per_task_rate[t] - b.per_task_rate[t] for t in tasks}
+    deltas = {t: a_map[t] - b_map[t] for t in tasks}
     point, lo, hi = bootstrap_ci(list(deltas.values()), statistic=_mean)
     significant = not (lo <= 0.0 <= hi)
     return PairedComparison(
@@ -216,8 +348,71 @@ def paired(
         lo=lo,
         hi=hi,
         significant=significant,
-        meaningful=significant and abs(point) >= MIN_MEANINGFUL_EFFECT,
+        meaningful=(
+            significant and abs(point) >= MIN_MEANINGFUL_EFFECT
+            if outcome == "accuracy"
+            else significant
+        ),
+        outcome=outcome,
+        baseline=_mean([b_map[t] for t in tasks]),
+        n_tasks=len(tasks),
     )
+
+
+def paired(
+    summary: dict[tuple[str, int], ArmEpoch], epoch: int, arm_a: str, arm_b: str
+) -> PairedComparison | None:
+    """Paired per-task accuracy difference arm_a - arm_b at one epoch."""
+    a = summary.get((arm_a, epoch))
+    b = summary.get((arm_b, epoch))
+    if not a or not b:
+        return None
+    return _paired_from_maps(
+        a.per_task_rate, b.per_task_rate,
+        epoch=epoch, arm_a=arm_a, arm_b=arm_b, outcome="accuracy",
+    )
+
+
+def paired_outcome(
+    summary: dict[tuple[str, int], ArmEpoch],
+    epoch: int,
+    arm_a: str,
+    arm_b: str,
+    key: str,
+) -> PairedComparison | None:
+    """Paired per-task difference on one continuous outcome, same machinery.
+
+    Negative is *better* for every key in `CONTINUOUS_OUTCOMES`: they are all
+    costs — calls, dollars, tokens, and how often the agent had to be steered.
+    """
+    a = summary.get((arm_a, epoch))
+    b = summary.get((arm_b, epoch))
+    if not a or not b:
+        return None
+    return _paired_from_maps(
+        a.per_task_outcome.get(key, {}), b.per_task_outcome.get(key, {}),
+        epoch=epoch, arm_a=arm_a, arm_b=arm_b, outcome=key,
+    )
+
+
+#: Every arm pair the scoreboard contrasts, in the order the questions matter.
+CONTRAST_PAIRS: tuple[tuple[str, str], ...] = (
+    ("treatment", "control"),
+    ("treatment", "sham"),
+    ("sham", "control"),
+)
+
+
+def family_wise_error(n_contrasts: int, alpha: float = 0.05) -> float:
+    """P(at least one of `n_contrasts` independent CIs excludes 0 by chance).
+
+    Reported rather than corrected. A Bonferroni correction applied after the
+    fact to a family whose size grew as the analysis grew is not a correction,
+    it is a negotiation; stating the number lets a reader discount accordingly.
+    """
+    if n_contrasts <= 0:
+        return 0.0
+    return 1.0 - (1.0 - alpha) ** n_contrasts
 
 
 def regression_rate(summary: dict[tuple[str, int], ArmEpoch], arm: str) -> list[dict]:
@@ -274,6 +469,55 @@ def control_null(summary: dict[tuple[str, int], ArmEpoch]) -> dict:
         "spread": variance**0.5,
         "range": max(values) - min(values),
     }
+
+
+def continuous_verdict(summary: dict[tuple[str, int], ArmEpoch], epoch: int) -> dict:
+    """The effort and steering contrasts at one epoch, for both key arm pairs.
+
+    Separate from `verdict()`'s pre-registered accuracy machinery on purpose.
+    These outcomes were added *after* seeing finding 12's probe, so they are
+    exploratory and are labelled as such — they cannot be dressed up as having
+    been pre-registered, and a threshold chosen now would be chosen knowing the
+    answer.
+    """
+    out: dict = {"epoch": epoch, "contrasts": {}, "n_contrasts": 0}
+    for arm_a, arm_b in (("treatment", "control"), ("treatment", "sham")):
+        for o in CONTINUOUS_OUTCOMES:
+            c = paired_outcome(summary, epoch, arm_a, arm_b, o.key)
+            if c is None:
+                continue
+            out["contrasts"][f"{arm_a}-{arm_b}/{o.key}"] = {
+                "delta": c.delta,
+                "ci": [c.lo, c.hi],
+                "relative": c.relative,
+                "baseline": c.baseline,
+                "significant": c.significant,
+                "n_tasks": c.n_tasks,
+            }
+            out["n_contrasts"] += 1
+
+    # The headline the probe predicted: treatment spends less to get there.
+    helped = [
+        k for k, v in out["contrasts"].items()
+        if k.startswith("treatment-control/") and v["significant"] and v["delta"] < 0
+    ]
+    hurt = [
+        k for k, v in out["contrasts"].items()
+        if k.startswith("treatment-control/") and v["significant"] and v["delta"] > 0
+    ]
+    if helped and not hurt:
+        out["claim"] = "treatment is cheaper than control on " + ", ".join(
+            k.split("/")[1] for k in helped
+        )
+    elif hurt and not helped:
+        out["claim"] = "treatment is more expensive than control on " + ", ".join(
+            k.split("/")[1] for k in hurt
+        )
+    elif helped and hurt:
+        out["claim"] = "mixed — treatment is cheaper on some axes and dearer on others"
+    else:
+        out["claim"] = "no detectable effort or steering difference (every CI spans zero)"
+    return out
 
 
 def verdict(summary: dict[tuple[str, int], ArmEpoch]) -> dict:
@@ -369,6 +613,10 @@ def verdict(summary: dict[tuple[str, int], ArmEpoch]) -> dict:
         ),
         "regression_rate": _safe_div(total_regressed, total_solved_before),
         "regressed_task_instances": total_regressed,
+        # Secondary, exploratory, and the axis finding 12 says carries the
+        # signal on a pool this saturated. Reported beside the primary claim so
+        # a reader cannot take the accuracy verdict as the whole answer.
+        "continuous": continuous_verdict(summary, last),
     }
 
 
