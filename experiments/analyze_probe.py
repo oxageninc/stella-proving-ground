@@ -1,6 +1,6 @@
 """Score the precision probe: does recall precision matter, or is presence enough?
 
-Reads `results/precision-probe/results.jsonl` (three arms, one digest) and
+Reads `results/precision-probe/results.jsonl` (the 2x2 of arms, one digest) and
 reports the two contrasts that carry the verdict, with bootstrap intervals over
 TASKS — the resampling unit that decides the width, because a task is the thing
 that varies. Resampling trials instead would report a confidence the design does
@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from proving_ground.stats import bootstrap_ci  # noqa: E402
 
-ARMS = ("control", "oracle", "diluted")
+ARMS = ("control", "oracle", "diluted", "noise")
 ROOT = Path("results/precision-probe/results.jsonl")
 
 
@@ -98,26 +98,51 @@ def main() -> int:
         print(f"  {arm:10s} {len(sub):>7d} {passes:>10.3f} {chk:>11.3f} "
               f"{dead:>10d} {cost:>7.2f}$")
 
-    # The two questions, in the order they have to be answered: do the facts
-    # help at all, and if so does burying them in mined noise destroy that.
-    print("\n--- does perfect context help at all? (oracle vs control) ---")
-    contrast(rows, "control", "oracle", lambda r: float(bool(r["passed"])), "task pass")
-    contrast(rows, "control", "oracle", check_rate, "check rate")
+    # The 2x2, read in the order the questions have to be answered.
+    passed = lambda r: float(bool(r["passed"]))  # noqa: E731
+    present = {a for a in ARMS if any(r["arm"] == a for r in rows)}
 
-    print("\n--- does noise destroy it? (diluted vs oracle) ---")
-    contrast(rows, "oracle", "diluted", lambda r: float(bool(r["passed"])), "task pass")
-    contrast(rows, "oracle", "diluted", check_rate, "check rate")
+    questions = [
+        ("do the facts help at all?", "control", "oracle"),
+        ("do the process notes help at all?", "control", "noise"),
+        ("does adding notes to facts help?", "oracle", "diluted"),
+        ("does adding facts to notes help?", "noise", "diluted"),
+        ("facts vs notes, head to head", "oracle", "noise"),
+        ("everything vs nothing", "control", "diluted"),
+    ]
+    for label, lo, hi in questions:
+        if lo not in present or hi not in present:
+            continue
+        print(f"\n--- {label} ({hi} vs {lo}) ---")
+        contrast(rows, lo, hi, passed, "task pass")
+        contrast(rows, lo, hi, check_rate, "check rate")
 
-    print("\n--- is diluted still better than nothing? (diluted vs control) ---")
-    contrast(rows, "control", "diluted", lambda r: float(bool(r["passed"])), "task pass")
-    contrast(rows, "control", "diluted", check_rate, "check rate")
+    print(f"\n  NOTE: {len(questions)} contrasts computed. At alpha=0.05 the")
+    print("  family-wise error rate is ~26%, so one interval excluding zero by")
+    print("  chance is expected. Replication decides, not this table.")
+
+    print("\n--- failure modes (where the mechanism lives) ---")
+    print(f"  {'arm':10s} {'aborted':>8s} {'stuck-loop':>11s} {'step-cap':>9s} "
+          f"{'req-arg':>8s} {'calls':>7s}")
+    for arm in ARMS:
+        sub = [r for r in rows if r["arm"] == arm]
+        if not sub:
+            continue
+        ab = sum(1 for r in sub if r.get("status") == "aborted")
+        loop = sum(1 for r in sub if "stuck-loop" in (r.get("stella_error") or ""))
+        cap = sum(1 for r in sub if "step cap" in (r.get("stella_error") or ""))
+        # The oracle-only signature: a convention enforced where it does not belong.
+        req = sum(1 for r in sub if "missing required argument" in (r.get("detail") or ""))
+        calls = statistics.mean([r["model_calls"] for r in sub])
+        print(f"  {arm:10s} {ab:>8d} {loop:>11d} {cap:>9d} {req:>8d} {calls:>7.1f}")
 
     print("\n--- per task, check rate ---")
     cols = {a: per_task(rows, a, check_rate) for a in ARMS}
     tasks = sorted(set().union(*(set(c) for c in cols.values())))
-    print(f"  {'task':24s} {'control':>8s} {'oracle':>8s} {'diluted':>8s}")
+    shown = [a for a in ARMS if cols[a]]
+    print("  " + f"{'task':24s}" + "".join(f"{a:>9s}" for a in shown))
     for t in tasks:
-        vals = [cols[a].get(t) for a in ARMS]
+        vals = [cols[a].get(t) for a in shown]
         cells = "".join(f"{v:>9.2f}" if v is not None else f"{'-':>9s}" for v in vals)
         print(f"  {t:24s}{cells}")
 
