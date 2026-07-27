@@ -626,3 +626,93 @@ The honest summary is that the ledger corpus may simply be too small a world to
 contain knowledge worth remembering. That is a finding about the experiment's
 design, and it was cheaper to learn from $1.11 of calibration than from a $17
 series.
+
+---
+
+## 12. Correctness was the wrong outcome. Context works — on the other axes.
+
+Findings 10–11 concluded that no arm beat control and that the instrument was
+saturated. Both statements are true **of task pass rate**, and both are
+incomplete, because pass/fail was the only outcome being scored. The same 192
+trials, re-scored on effort and on how often the agent had to be steered:
+
+| arm | task pass | model calls | cost | stuck-loops |
+|---|---|---|---|---|
+| control | 0.792 | 51.5 | $0.0147 | 8 |
+| oracle (facts) | 0.688 | 36.6 | $0.0127 | 4 |
+| noise (notes) | 0.812 | 45.4 | $0.0149 | 6 |
+| diluted (both) | 0.896 | **40.4** | **$0.0113** | **0** |
+
+Paired over 12 tasks, completed trials only (an abort truncates a run and would
+flatter whichever arm aborts more):
+
+```
+model calls     diluted - control    -9.89  [-19.73, -0.29]   -25.1%   excludes 0
+cost            diluted - control   -33.7%  [        , -0.00]           excludes 0
+stuck-loop rate diluted - control    -0.17  [ -0.25, -0.08]  -100.0%   excludes 0
+task pass       diluted - control    +0.10  [ -0.02, +0.23]            —
+```
+
+The arm that showed *no reliable correctness gain* used **a quarter fewer turns,
+a third less money, and never once had to be steered** — control looped after a
+steering warning 8 times in 48 trials; diluted, zero.
+
+### The saturated tasks were not saturated
+
+The claim in finding 11 that seven tasks "buy nothing but cost" was wrong. On the
+five where control scores a perfect 1.00 on every check:
+
+| task | control calls | diluted calls | Δ |
+|---|---|---|---|
+| eval-01-refund | 57.0 | 17.0 | −40.0 |
+| eval-09-reconcile | 39.3 | 24.8 | −14.6 |
+| eval-08-installments | 36.5 | 32.2 | −4.2 |
+| eval-10-cap | 21.8 | 19.3 | −2.4 |
+| eval-12-largest | 22.5 | 25.3 | +2.8 |
+| **all five** | **35.2** | **23.9** | **−32.2%** |
+
+Control's own spread on those tasks is sd=17.2 over a 19–93 range. A binary
+outcome cannot see any of that. **Turns-to-solve does not saturate**: an agent
+that always succeeds can still take 19 turns or 93.
+
+This dissolves the headroom problem that finding 11 spent $1.11 failing to fix.
+The tasks did not need to be harder. The outcome needed to be continuous.
+
+### Which ingredient does what
+
+The 2×2 separates them cleanly, and the account is mechanistic:
+
+* **Facts drive efficiency.** oracle −21.7% calls, noise +5.4%. Knowing that
+  handlers live in `registry.py` means not searching for them.
+* **Facts alone drive harm.** The over-application signature from finding 10 —
+  three `missing required argument` failures, all oracle, none elsewhere.
+* **Notes alone do almost nothing** on any axis (finding 10b), but combined with
+  facts they cancel the harm while the efficiency survives.
+
+So "context did not help" was an artifact of measuring one dimension. Context
+made the agent faster, cheaper and far less likely to need intervention, and
+those effects are larger and cleaner than anything on the pass-rate axis.
+
+### Limits
+
+- Many contrasts have now been computed across findings 10–12; the family-wise
+  error rate is high. What earns confidence here is not one interval but three
+  independent measures (calls, cost, steering) agreeing in direction and size on
+  the same arm.
+- Fewer calls is only good if the work still gets done. It does: diluted has the
+  *highest* pass rate and the *fewest* aborts, so it is finishing more often, not
+  giving up sooner.
+- One run. It needs replication before the sizes are trusted.
+- These are one-shot headless trials, so "needed steering" is proxied by the
+  harness's own stuck-loop warning rather than by a human intervening.
+
+### What follows
+
+1. **Make effort and steering first-class outcomes**, reported beside pass rate
+   in every scoreboard, not dug out of failure diagnostics afterwards.
+2. **Re-run the series on these axes.** The correctness verdict was
+   underpowered; the effort verdict may not be, because the outcome is
+   continuous and every trial contributes signal rather than one bit.
+3. **Stop tuning task difficulty.** Finding 11's recommendation is withdrawn: the
+   pool does not need to be harder, and the eight "wasted" tasks are carrying a
+   large efficiency signal.

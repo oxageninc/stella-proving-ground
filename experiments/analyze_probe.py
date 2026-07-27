@@ -6,7 +6,14 @@ TASKS — the resampling unit that decides the width, because a task is the thin
 that varies. Resampling trials instead would report a confidence the design does
 not have.
 
-Two outcome scales, deliberately both:
+Outcomes are scored on THREE axes, not one. Finding 12: scoring only pass/fail
+concluded "context did not help" while the same trials showed the context arm
+using a quarter fewer turns, a third less money, and never once needing to be
+steered. Correctness saturates; effort does not — an agent that always succeeds
+can still take 19 turns or 93 — so on a pool this easy the continuous outcomes
+carry almost all of the signal.
+
+Two correctness scales, deliberately both:
 
 * **task pass** — all ~5 checks held. The headline, and the coarse one: it moves
   only when a trial crosses from "one convention missed" to "none missed".
@@ -117,7 +124,33 @@ def main() -> int:
         contrast(rows, lo, hi, passed, "task pass")
         contrast(rows, lo, hi, check_rate, "check rate")
 
-    print(f"\n  NOTE: {len(questions)} contrasts computed. At alpha=0.05 the")
+    # --- effort and steering: continuous outcomes, which do not saturate -----
+    #
+    # Restricted to COMPLETED trials. An abort truncates a run, so including
+    # them would flatter whichever arm aborts more — and the arms differ a lot
+    # on abort rate, which is itself one of the results.
+    def completed(f):
+        return lambda r: f(r) if r.get("status") == "completed" else None
+
+    print("\n--- effort: how much work did the answer cost? (completed trials) ---")
+    for label, lo, hi in questions:
+        if lo not in present or hi not in present:
+            continue
+        contrast(rows, lo, hi, completed(lambda r: float(r["model_calls"])), "model calls")
+        contrast(rows, lo, hi, completed(lambda r: r["cost_usd"] * 1000), "cost (millis)")
+
+    print("\n--- steering: how often did it loop after a warning? (all trials) ---")
+    print("    the closest proxy this harness has for 'a human had to intervene'")
+    for label, lo, hi in questions:
+        if lo not in present or hi not in present:
+            continue
+        contrast(
+            rows, lo, hi,
+            lambda r: float("stuck-loop" in (r.get("stella_error") or "")),
+            "stuck-loop",
+        )
+
+    print(f"\n  NOTE: {len(questions)} correctness contrasts computed. At alpha=0.05 the")
     print("  family-wise error rate is ~26%, so one interval excluding zero by")
     print("  chance is expected. Replication decides, not this table.")
 
