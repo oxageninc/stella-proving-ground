@@ -77,6 +77,13 @@ class PinnedConfig:
     provider: str = "openrouter"
     reasoning: str = "off"
     budget_usd: float = 0.25
+    #: Plans over five steps trigger a scope review, and a headless run has
+    #: nobody to ask, so it aborts having done no work at all. Every trial here
+    #: runs in a workspace that is created and deleted for that trial, which is
+    #: precisely the "working tree is disposable" case the bypass documents.
+    #: Left off, the metric would mostly be measuring how often the planner
+    #: exceeded five steps.
+    headless_scope_bypass: bool = True
     #: Extract observations from the reflection log after each experience block.
     #: Without this nothing is ever extracted on the `stella run` path, so the
     #: lifecycle cannot advance past reflection. Recorded as part of the pinned
@@ -116,6 +123,7 @@ class PinnedConfig:
             "model",
             "reflection_model",
             "pump_proposals",
+            "headless_scope_bypass",
             "provider",
             "reasoning",
             "budget_usd",
@@ -171,6 +179,7 @@ def workspace_settings(config: PinnedConfig) -> dict:
             "auto_mode": "off",
             "effort_auto": "off",
             "reasoning_auto": "off",
+            "headless_scope_bypass": "on" if config.headless_scope_bypass else "off",
             "default_model": config.reflection_model,
             "pipeline_worker_model": config.model,
             "pipeline_triage_model": config.model,
