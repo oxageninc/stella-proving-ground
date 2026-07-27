@@ -297,12 +297,23 @@ def verdict(summary: dict[tuple[str, int], ArmEpoch]) -> dict:
         and t_vs_s.delta > 0
     )
 
+    # The pre-registration says "the series is the result; a single epoch pair
+    # proves nothing". That has to bind when the numbers come out *favourable*
+    # or it was never a commitment. Two epochs is one pair.
+    preliminary = len(epochs) < 3
+
     if supported:
-        claim = "supported"
+        claim = "supported — PRELIMINARY ONLY" if preliminary else "supported"
         reason = (
             "treatment exceeds both control and sham by more than the "
             "pre-registered threshold, with CIs excluding zero"
         )
+        if preliminary:
+            reason += (
+                f"; but this is {len(epochs)} epochs — a single pair — and the "
+                f"pre-registration commits to the series being the result. "
+                f"Directional evidence, not a finding"
+            )
     elif t_vs_s and t_vs_c and t_vs_c.meaningful and t_vs_c.delta > 0 and not t_vs_s.meaningful:
         claim = "not supported — volume, not content"
         reason = (
@@ -319,6 +330,7 @@ def verdict(summary: dict[tuple[str, int], ArmEpoch]) -> dict:
     return {
         "claim": claim,
         "reason": reason,
+        "preliminary": preliminary,
         "final_epoch": last,
         "treatment_minus_control": None if not t_vs_c else {
             "delta": t_vs_c.delta, "ci": [t_vs_c.lo, t_vs_c.hi], "verdict": t_vs_c.verdict()
