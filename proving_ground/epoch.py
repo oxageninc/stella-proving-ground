@@ -227,6 +227,7 @@ def run_evaluation(
     config: PinnedConfig,
     concurrency: int,
     log,
+    sink=None,
 ) -> list[Trial]:
     """Evaluate the held-out pool.
 
@@ -266,6 +267,8 @@ def run_evaluation(
         for future in as_completed(futures):
             trial = future.result()
             trials.append(trial)
+            if sink is not None:
+                sink(trial)
             log(
                 f"    eval {arm.name} E{epoch} {trial.task_id}#{trial.trial}: "
                 f"{'PASS' if trial.passed else 'fail'} ${trial.cost_usd:.4f}"
@@ -326,6 +329,17 @@ def run_series(
                 + (f" — leak scan {leak.summary()}" if leak else "")
             )
 
+            def sink(trial: Trial, _stats=stats) -> None:
+                row = trial.as_row()
+                row.update(
+                    {
+                        "config": config.as_dict(),
+                        "config_fingerprint": config.fingerprint(),
+                        "store_stats": _stats,
+                    }
+                )
+                _append(paths.results, row)
+
             trials = run_evaluation(
                 arm,
                 epoch=epoch,
@@ -334,17 +348,8 @@ def run_series(
                 config=config,
                 concurrency=concurrency,
                 log=log,
+                sink=sink,
             )
-            for trial in trials:
-                row = trial.as_row()
-                row.update(
-                    {
-                        "config": config.as_dict(),
-                        "config_fingerprint": config.fingerprint(),
-                        "store_stats": stats,
-                    }
-                )
-                _append(paths.results, row)
 
             solved = sum(1 for t in trials if t.passed)
             _append(
@@ -364,28 +369,40 @@ def run_series(
             log(f"  {arm.name} E{epoch}: {solved}/{len(trials)} solved")
 
         # Experience block for the *next* epoch.
+        #
+        # Serial *within* an arm — the whole point is that trial n+1 sees what
+        # trial n learned — but the arms hold separate stores and share nothing,
+        # so they are worked concurrently.
         if epoch + 1 < epochs:
-            for arm in selected:
+
+            def work(arm: Arm) -> list[Trial]:
                 pool_tasks = experience[arm.name]
                 if not pool_tasks:
-                    continue
+                    return []
                 start = cursor[arm.name]
                 block = [
                     pool_tasks[(start + i) % len(pool_tasks)] for i in range(block_size)
                 ]
                 cursor[arm.name] = start + block_size
                 log(f"  working {block_size} experience tasks for {arm.name}")
-                exp_trials = run_experience_block(
+                trials = run_experience_block(
                     arm, block, epoch=epoch, paths=paths, config=config, log=log
                 )
                 pump_store(arm.store(root), config, log)
+                return trials
+
+            with ThreadPoolExecutor(max_workers=max(1, len(selected))) as pool:
+                blocks = list(pool.map(work, selected))
+
+            for arm, exp_trials in zip(selected, blocks):
+                stats = store_stats(arm.store(root))
                 for trial in exp_trials:
                     row = trial.as_row()
                     row.update(
                         {
                             "config": config.as_dict(),
                             "config_fingerprint": config.fingerprint(),
-                            "store_stats": store_stats(arm.store(root)),
+                            "store_stats": stats,
                         }
                     )
                     _append(paths.results, row)
