@@ -716,3 +716,75 @@ those effects are larger and cleaner than anything on the pass-rate axis.
 3. **Stop tuning task difficulty.** Finding 11's recommendation is withdrawn: the
    pool does not need to be harder, and the eight "wasted" tasks are carrying a
    large efficiency signal.
+
+---
+
+## 13. The store learns the right things, six times over — and they are the wrong things to learn
+
+Read the treatment arm's actual memories after two rounds of `series-005`, and
+two problems are visible at once. Neither is the one we had been looking for.
+
+### It is no longer mining self-critique
+
+22 of 23 lessons are domain facts about the codebase; exactly one is the agent
+commenting on its own process. Finding 9 and the 8-in-10 self-critique
+measurement that motivated so much of this work describe a system that no longer
+exists — #768 fixed it.
+
+### It stores six facts twenty-three times
+
+| stored | fact |
+|---|---|
+| **7×** | commands are registered in `registry.py` |
+| 4× | use `parse_amount` / `format_amount` |
+| 4× | handlers live in `commands/` |
+| 2× | validate arguments with `require()` |
+| 2× | error handling |
+| 1× | handler signature |
+
+**61% of the store is restatement.** Byte-identical content already collapses —
+a memory's lineage is seeded from its content hash — but the reflection loop
+emits paraphrases, not copies, so near-duplicates accumulate without limit.
+
+This is not untidiness. Recall has a budget. Three slots spent on three
+phrasings of one fact are three slots not spent on the other five, so the store
+gets *worse* at covering the codebase the longer it runs. The oracle arm that
+cut steps 25% carried four **distinct** facts; the live store cannot reliably
+deliver that spread.
+
+Fixed in `stella` by `retain_unknown`, which applies the predicate
+`retain_unforgotten` already used, pointed at live memories instead of
+tombstones. The "is this the same lesson in different words" machinery existed
+and had only ever been asked *did the user delete this*, never *do we know this
+already*.
+
+### The deeper problem: it is memorising the table of contents
+
+Every fact above is one file-read away. `registry.py` is one file. `money.py` is
+one file. `commands/` is one directory listing.
+
+That is the same wall finding 11 hit from the other side — *knowledge that is
+free to acquire cannot be made valuable by testing it harder* — and it explains
+finding 10's oracle arm, which delivered those exact conventions perfectly and
+did not help. A memory is worth its recall slot only in proportion to what it
+costs to rediscover, and these cost a minute of reading.
+
+Deduplication is still worth doing; a store that is 61% restatement is broken on
+its own terms. But **six perfectly deduplicated facts about `registry.py` will
+not help either.** It would be a tidier store of worthless memories.
+
+The categories that would pay are the ones absent from the code: gotchas that
+cannot be read anywhere ("this test is flaky"), decisions and the reasoning
+behind them, and user preferences. None can be re-derived at any price.
+
+### What this means for the experiment itself
+
+The corpus is a toy ledger: four conventions, all written down in one
+`CONTRIBUTING.md`, no history, no flakiness, no prior decisions, no user. **It
+contains nothing in the categories that make memory pay.**
+
+So the proving ground may be structurally incapable of demonstrating memory
+working, however well the memory system behaves — not because the tasks are too
+easy (finding 11 tested and rejected that), but because the *world* is too
+small to hold knowledge worth remembering. That is a claim about the
+experiment's design, and it is the most important thing on this page.

@@ -1,0 +1,302 @@
+{
+  "model": "z-ai/glm-4.7-flash",
+  "reflection_model": "google/gemini-2.5-flash-lite",
+  "provider": "openrouter",
+  "reasoning": "off",
+  "budget_usd": 0.25,
+  "headless_scope_bypass": true,
+  "pump_proposals": true,
+  "stella_binary": "/Users/macanderson/Projects/stella/target/release/stella",
+  "stella_commit": "fb9a4d950f64887cc375b459cef3ec6a92eef53b",
+  "stella_version": "stella 0.5.63",
+  "binary_sha256": "b6b56dd70000217f205374f3ecf2c602b7109de564b3831ce4603a179c165b8b",
+  "harness_commit": "d9937643574bda218aaaba896e087e5d0d302bca",
+  "task_pool_digest": "a01e7a2175573161",
+  "lifecycle_enabled": true
+}
+
+=== epoch 0 ===
+  treatment: store 0 memories / 0 episodes / 0 records — leak scan clean — 0 stored values scanned against 486 evaluation-only n-grams
+    eval treatment E0 eval-01-refund#3: PASS $0.0044
+    eval treatment E0 eval-02-sweep#4: PASS $0.0028
+    eval treatment E0 eval-02-sweep#2: fail $0.0046
+    eval treatment E0 eval-02-sweep#1: PASS $0.0065
+    eval treatment E0 eval-02-sweep#0: fail $0.0068
+    eval treatment E0 eval-03-interest#2: fail $0.0029
+    eval treatment E0 eval-01-refund#0: PASS $0.0079
+    eval treatment E0 eval-03-interest#0: fail $0.0062
+    eval treatment E0 eval-02-sweep#3: fail $0.0116
+    eval treatment E0 eval-01-refund#1: PASS $0.0095
+    eval treatment E0 eval-03-interest#1: fail $0.0084
+    eval treatment E0 eval-01-refund#2: PASS $0.0110
+    eval treatment E0 eval-01-refund#4: PASS $0.0126
+    eval treatment E0 eval-04-split#2: PASS $0.0065
+    eval treatment E0 eval-03-interest#3: PASS $0.0117
+    eval treatment E0 eval-05-statement#1: fail $0.0043
+    eval treatment E0 eval-05-statement#2: PASS $0.0046
+    eval treatment E0 eval-05-statement#3: PASS $0.0057
+    eval treatment E0 eval-05-statement#4: PASS $0.0076
+    eval treatment E0 eval-05-statement#0: fail $0.0129
+    eval treatment E0 eval-04-split#0: PASS $0.0149
+    eval treatment E0 eval-06-merge#1: PASS $0.0089
+    eval treatment E0 eval-06-merge#3: fail $0.0068
+    eval treatment E0 eval-03-interest#4: PASS $0.0235
+    eval treatment E0 eval-06-merge#0: fail $0.0181
+    eval treatment E0 eval-07-tax#1: fail $0.0073
+    eval treatment E0 eval-06-merge#2: PASS $0.0129
+    eval treatment E0 eval-08-installments#1: fail $0.0028
+    eval treatment E0 eval-07-tax#0: PASS $0.0160
+    eval treatment E0 eval-08-installments#0: PASS $0.0056
+    eval treatment E0 eval-04-split#3: PASS $0.0489
+    eval treatment E0 eval-08-installments#4: fail $0.0028
+    eval treatment E0 eval-08-installments#2: fail $0.0067
+    eval treatment E0 eval-07-tax#4: fail $0.0137
+    eval treatment E0 eval-08-installments#3: fail $0.0051
+    eval treatment E0 eval-09-reconcile#2: PASS $0.0049
+    eval treatment E0 eval-09-reconcile#1: PASS $0.0052
+    eval treatment E0 eval-10-cap#1: fail $0.0028
+    eval treatment E0 eval-09-reconcile#3: PASS $0.0074
+    eval treatment E0 eval-09-reconcile#0: PASS $0.0096
+    eval treatment E0 eval-10-cap#0: PASS $0.0035
+    eval treatment E0 eval-10-cap#2: PASS $0.0033
+    eval treatment E0 eval-07-tax#2: PASS $0.0252
+    eval treatment E0 eval-09-reconcile#4: PASS $0.0052
+    eval treatment E0 eval-10-cap#3: PASS $0.0043
+    eval treatment E0 eval-04-split#1: PASS $0.0602
+    eval treatment E0 eval-10-cap#4: PASS $0.0035
+    eval treatment E0 eval-11-share#0: fail $0.0036
+    eval treatment E0 eval-11-share#2: fail $0.0054
+    eval treatment E0 eval-12-largest#1: fail $0.0027
+    eval treatment E0 eval-12-largest#0: PASS $0.0048
+    eval treatment E0 eval-11-share#1: PASS $0.0045
+    eval treatment E0 eval-12-largest#2: PASS $0.0048
+    eval treatment E0 eval-11-share#3: PASS $0.0122
+    eval treatment E0 eval-12-largest#3: PASS $0.0073
+    eval treatment E0 eval-11-share#4: PASS $0.0143
+    eval treatment E0 eval-12-largest#4: fail $0.0135
+    eval treatment E0 eval-06-merge#4: fail $0.0303
+    eval treatment E0 eval-04-split#4: PASS $0.0000
+    eval treatment E0 eval-07-tax#3: fail $0.0896
+  treatment E0: 37/60 solved
+  control: store 0 memories / 0 episodes / 0 records
+    eval control E0 eval-02-sweep#3: PASS $0.0041
+    eval control E0 eval-02-sweep#2: fail $0.0041
+    eval control E0 eval-01-refund#4: PASS $0.0115
+    eval control E0 eval-02-sweep#4: fail $0.0032
+    eval control E0 eval-03-interest#0: fail $0.0257
+    eval control E0 eval-02-sweep#1: PASS $0.0082
+    eval control E0 eval-01-refund#1: PASS $0.0059
+    eval control E0 eval-01-refund#3: PASS $0.0197
+    eval control E0 eval-02-sweep#0: PASS $0.0055
+    eval control E0 eval-04-split#2: PASS $0.0032
+    eval control E0 eval-01-refund#0: PASS $0.0081
+    eval control E0 eval-03-interest#2: fail $0.0423
+    eval control E0 eval-04-split#4: PASS $0.0041
+    eval control E0 eval-04-split#3: PASS $0.0108
+    eval control E0 eval-03-interest#4: PASS $0.0090
+    eval control E0 eval-04-split#1: PASS $0.0061
+    eval control E0 eval-05-statement#0: fail $0.0106
+    eval control E0 eval-04-split#0: PASS $0.0053
+    eval control E0 eval-05-statement#4: PASS $0.0214
+    eval control E0 eval-06-merge#0: fail $0.0032
+    eval control E0 eval-05-statement#2: fail $0.0277
+    eval control E0 eval-05-statement#1: PASS $0.0137
+    eval control E0 eval-05-statement#3: PASS $0.0359
+    eval control E0 eval-03-interest#3: fail $0.0757
+    eval control E0 eval-06-merge#1: PASS $0.0086
+    eval control E0 eval-06-merge#4: PASS $0.0079
+    eval control E0 eval-06-merge#2: PASS $0.0097
+    eval control E0 eval-07-tax#3: fail $0.0038
+    eval control E0 eval-07-tax#1: fail $0.0078
+    eval control E0 eval-06-merge#3: PASS $0.0140
+    eval control E0 eval-08-installments#0: fail $0.0042
+    eval control E0 eval-08-installments#1: fail $0.0042
+    eval control E0 eval-08-installments#2: PASS $0.0028
+    eval control E0 eval-08-installments#3: PASS $0.0044
+    eval control E0 eval-09-reconcile#2: PASS $0.0035
+    eval control E0 eval-07-tax#2: fail $0.0099
+    eval control E0 eval-07-tax#0: PASS $0.0183
+    eval control E0 eval-07-tax#4: PASS $0.0121
+    eval control E0 eval-09-reconcile#0: PASS $0.0066
+    eval control E0 eval-09-reconcile#4: PASS $0.0034
+    eval control E0 eval-09-reconcile#1: PASS $0.0067
+    eval control E0 eval-10-cap#0: PASS $0.0046
+    eval control E0 eval-08-installments#4: PASS $0.0106
+    eval control E0 eval-10-cap#3: PASS $0.0031
+    eval control E0 eval-09-reconcile#3: PASS $0.0115
+    eval control E0 eval-10-cap#4: PASS $0.0031
+    eval control E0 eval-11-share#0: fail $0.0038
+    eval control E0 eval-10-cap#2: PASS $0.0046
+    eval control E0 eval-12-largest#0: fail $0.0028
+    eval control E0 eval-11-share#1: PASS $0.0053
+    eval control E0 eval-12-largest#2: PASS $0.0038
+    eval control E0 eval-11-share#2: PASS $0.0051
+    eval control E0 eval-12-largest#3: PASS $0.0042
+    eval control E0 eval-11-share#4: PASS $0.0080
+    eval control E0 eval-12-largest#1: fail $0.0063
+    eval control E0 eval-11-share#3: fail $0.0090
+    eval control E0 eval-12-largest#4: PASS $0.0057
+    eval control E0 eval-10-cap#1: PASS $0.0145
+    eval control E0 eval-03-interest#1: fail $0.2515
+    eval control E0 eval-01-refund#2: fail $0.0000
+  control E0: 41/60 solved
+  sham: store 0 memories / 0 episodes / 0 records — leak scan clean — 0 stored values scanned against 486 evaluation-only n-grams
+    eval sham E0 eval-02-sweep#2: PASS $0.0032
+    eval sham E0 eval-01-refund#1: PASS $0.0067
+    eval sham E0 eval-02-sweep#1: PASS $0.0061
+    eval sham E0 eval-01-refund#3: PASS $0.0062
+    eval sham E0 eval-02-sweep#4: PASS $0.0058
+    eval sham E0 eval-02-sweep#0: PASS $0.0071
+    eval sham E0 eval-03-interest#0: fail $0.0040
+    eval sham E0 eval-01-refund#2: PASS $0.0073
+    eval sham E0 eval-03-interest#2: fail $0.0029
+    eval sham E0 eval-02-sweep#3: PASS $0.0088
+    eval sham E0 eval-03-interest#1: fail $0.0030
+    eval sham E0 eval-04-split#0: PASS $0.0037
+    eval sham E0 eval-04-split#2: PASS $0.0042
+    eval sham E0 eval-01-refund#4: PASS $0.0114
+    eval sham E0 eval-03-interest#3: fail $0.0083
+    eval sham E0 eval-05-statement#0: PASS $0.0038
+    eval sham E0 eval-05-statement#1: PASS $0.0035
+    eval sham E0 eval-03-interest#4: fail $0.0065
+    eval sham E0 eval-05-statement#2: fail $0.0041
+    eval sham E0 eval-04-split#4: PASS $0.0063
+    eval sham E0 eval-06-merge#1: fail $0.0030
+    eval sham E0 eval-05-statement#4: PASS $0.0057
+    eval sham E0 eval-05-statement#3: PASS $0.0062
+    eval sham E0 eval-06-merge#2: PASS $0.0111
+    eval sham E0 eval-01-refund#0: PASS $0.0387
+    eval sham E0 eval-06-merge#3: fail $0.0068
+    eval sham E0 eval-07-tax#3: PASS $0.0034
+    eval sham E0 eval-04-split#3: PASS $0.0148
+    eval sham E0 eval-08-installments#0: fail $0.0359
+    eval sham E0 eval-07-tax#4: fail $0.0173
+    eval sham E0 eval-06-merge#0: fail $0.0155
+    eval sham E0 eval-08-installments#1: PASS $0.0079
+    eval sham E0 eval-08-installments#3: fail $0.0637
+    eval sham E0 eval-08-installments#4: PASS $0.0204
+    eval sham E0 eval-07-tax#2: PASS $0.0174
+    eval sham E0 eval-09-reconcile#1: PASS $0.0040
+    eval sham E0 eval-08-installments#2: fail $0.0090
+    eval sham E0 eval-06-merge#4: PASS $0.0246
+    eval sham E0 eval-09-reconcile#4: PASS $0.0043
+    eval sham E0 eval-10-cap#0: PASS $0.0040
+    eval sham E0 eval-09-reconcile#2: PASS $0.0063
+    eval sham E0 eval-09-reconcile#3: PASS $0.0062
+    eval sham E0 eval-07-tax#0: PASS $0.0228
+    eval sham E0 eval-10-cap#2: PASS $0.0045
+    eval sham E0 eval-09-reconcile#0: PASS $0.0080
+    eval sham E0 eval-04-split#1: PASS $0.0257
+    eval sham E0 eval-07-tax#1: PASS $0.0364
+    eval sham E0 eval-12-largest#0: PASS $0.0045
+    eval sham E0 eval-11-share#3: fail $0.0076
+    eval sham E0 eval-10-cap#1: PASS $0.0144
+    eval sham E0 eval-10-cap#4: PASS $0.0140
+    eval sham E0 eval-12-largest#3: fail $0.0034
+    eval sham E0 eval-10-cap#3: PASS $0.0241
+    eval sham E0 eval-11-share#0: PASS $0.0074
+    eval sham E0 eval-11-share#1: PASS $0.0101
+    eval sham E0 eval-12-largest#2: PASS $0.0070
+    eval sham E0 eval-12-largest#4: PASS $0.0047
+    eval sham E0 eval-12-largest#1: PASS $0.0111
+    eval sham E0 eval-11-share#4: PASS $0.0167
+    eval sham E0 eval-11-share#2: fail $0.0476
+  sham E0: 44/60 solved
+  working 5 experience tasks for treatment
+  working 5 experience tasks for sham
+    experience sham sham-01-indent: fail $0.0030
+    experience sham sham-02-dedent: fail $0.0020
+    experience treatment exp-01-withdraw: pass $0.0083
+    experience sham sham-03-upper: fail $0.0029
+    experience treatment exp-02-open: pass $0.0036
+    experience sham sham-04-numbers: fail $0.0024
+    experience treatment exp-03-close: fail $0.0042
+    experience sham sham-05-strip: fail $0.0049
+    pump: [35m✦[0m 0 new observation(s), 7 observation(s) total, 0 proposal(s) (0 new)
+    experience treatment exp-04-list: pass $0.0040
+    experience treatment exp-05-total: pass $0.0033
+    pump: [35m✦[0m 0 new observation(s), 7 observation(s) total, 0 proposal(s) (0 new)
+
+=== epoch 1 ===
+  treatment: store 7 memories / 5 episodes / 7 records — leak scan clean — 27328 stored values scanned against 486 evaluation-only n-grams
+    eval treatment E1 eval-01-refund#3: PASS $0.0028
+    eval treatment E1 eval-02-sweep#3: PASS $0.0070
+    eval treatment E1 eval-02-sweep#2: PASS $0.0098
+    eval treatment E1 eval-02-sweep#1: fail $0.0115
+    eval treatment E1 eval-01-refund#2: PASS $0.0117
+    eval treatment E1 eval-02-sweep#4: fail $0.0123
+    eval treatment E1 eval-03-interest#0: fail $0.0085
+    eval treatment E1 eval-03-interest#2: fail $0.0064
+    eval treatment E1 eval-01-refund#0: PASS $0.0259
+    eval treatment E1 eval-01-refund#1: PASS $0.0167
+    eval treatment E1 eval-01-refund#4: PASS $0.0167
+    eval treatment E1 eval-04-split#1: PASS $0.0065
+    eval treatment E1 eval-03-interest#1: PASS $0.0123
+    eval treatment E1 eval-04-split#2: PASS $0.0079
+    eval treatment E1 eval-04-split#0: PASS $0.0087
+    eval treatment E1 eval-04-split#3: fail $0.0097
+    eval treatment E1 eval-04-split#4: PASS $0.0099
+    eval treatment E1 eval-05-statement#1: PASS $0.0059
+    eval treatment E1 eval-05-statement#0: PASS $0.0071
+    eval treatment E1 eval-03-interest#3: fail $0.0149
+    eval treatment E1 eval-05-statement#3: PASS $0.0051
+    eval treatment E1 eval-06-merge#1: fail $0.0032
+    eval treatment E1 eval-05-statement#2: PASS $0.0113
+    eval treatment E1 eval-06-merge#3: PASS $0.0050
+    eval treatment E1 eval-03-interest#4: PASS $0.0137
+    eval treatment E1 eval-06-merge#0: PASS $0.0090
+    eval treatment E1 eval-07-tax#2: PASS $0.0056
+    eval treatment E1 eval-06-merge#2: PASS $0.0081
+    eval treatment E1 eval-08-installments#0: fail $0.0070
+    eval treatment E1 eval-08-installments#2: fail $0.0034
+    eval treatment E1 eval-02-sweep#0: fail $0.0689
+    eval treatment E1 eval-08-installments#1: fail $0.0070
+    eval treatment E1 eval-08-installments#4: fail $0.0029
+    eval treatment E1 eval-09-reconcile#0: fail $0.0034
+    eval treatment E1 eval-08-installments#3: fail $0.0048
+    eval treatment E1 eval-05-statement#4: fail $0.0182
+    eval treatment E1 eval-09-reconcile#1: PASS $0.0070
+    eval treatment E1 eval-09-reconcile#2: PASS $0.0061
+    eval treatment E1 eval-09-reconcile#4: PASS $0.0079
+    eval treatment E1 eval-07-tax#1: PASS $0.0193
+    eval treatment E1 eval-10-cap#1: PASS $0.0050
+    eval treatment E1 eval-10-cap#2: PASS $0.0083
+    eval treatment E1 eval-09-reconcile#3: PASS $0.0114
+    eval treatment E1 eval-10-cap#3: PASS $0.0067
+    eval treatment E1 eval-11-share#0: fail $0.0101
+    eval treatment E1 eval-11-share#1: fail $0.0062
+    eval treatment E1 eval-11-share#2: PASS $0.0109
+    eval treatment E1 eval-12-largest#0: PASS $0.0133
+    eval treatment E1 eval-11-share#4: fail $0.0091
+    eval treatment E1 eval-06-merge#4: PASS $0.0375
+    eval treatment E1 eval-12-largest#1: PASS $0.0309
+    eval treatment E1 eval-07-tax#4: fail $0.0873
+    eval treatment E1 eval-12-largest#2: PASS $0.0338
+    eval treatment E1 eval-11-share#3: PASS $0.0124
+    eval treatment E1 eval-12-largest#3: PASS $0.0122
+    eval treatment E1 eval-10-cap#4: PASS $0.0720
+    eval treatment E1 eval-07-tax#0: PASS $0.0213
+    eval treatment E1 eval-12-largest#4: PASS $0.0491
+    eval treatment E1 eval-10-cap#0: PASS $0.0711
+    eval treatment E1 eval-07-tax#3: PASS $0.0625
+  treatment E1: 41/60 solved
+  control: store 0 memories / 0 episodes / 0 records
+    eval control E1 eval-02-sweep#3: fail $0.0073
+    eval control E1 eval-01-refund#0: PASS $0.0174
+    eval control E1 eval-02-sweep#0: PASS $0.0155
+    eval control E1 eval-01-refund#3: PASS $0.0147
+    eval control E1 eval-02-sweep#2: PASS $0.0165
+    eval control E1 eval-01-refund#1: PASS $0.0187
+    eval control E1 eval-02-sweep#1: PASS $0.0191
+    eval control E1 eval-03-interest#2: fail $0.0032
+    eval control E1 eval-03-interest#0: fail $0.0221
+    eval control E1 eval-01-refund#2: PASS $0.0242
+    eval control E1 eval-04-split#1: PASS $0.0056
+    eval control E1 eval-04-split#2: fail $0.0042
+    eval control E1 eval-01-refund#4: PASS $0.0245
+    eval control E1 eval-03-interest#4: fail $0.0093
+    eval control E1 eval-04-split#3: PASS $0.0064
+    eval control E1 eval-05-statement#0: PASS $0.0075
+    eval control E1 eval-05-statement#3: fail $0.0078
+    eval control E1 eval-03-interest#1: fail $0.0179
+    eval control E1 eval-04-split#0: PASS $0.0162
