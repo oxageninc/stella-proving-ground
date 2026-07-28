@@ -56,6 +56,51 @@ def benign_ngrams() -> set[str]:
     return benign
 
 
+#: Suffixes stripped when deciding whether a word is *really* new vocabulary.
+#: Deliberately tiny and English-specific — this is a false-positive filter, not
+#: a linguistics project.
+_SUFFIXES = ("s", "es", "ed", "ing", "d")
+
+
+def _stem(word: str) -> str:
+    """Crude inflectional stem: the longest sensible truncation.
+
+    `records` -> `record`, `credited` -> `credit`, `printing` -> `print`.
+    """
+    for suffix in sorted(_SUFFIXES, key=len, reverse=True):
+        if len(word) > len(suffix) + 2 and word.endswith(suffix):
+            return word[: -len(suffix)]
+    return word
+
+
+def is_novel_word(word: str, benign: set[str]) -> bool:
+    """Is this word genuinely absent from what the agent may have seen?
+
+    Compares stems, not surface forms. The gate previously treated `records` as
+    evaluation-only because the experience prompts say `Record` — one letter of
+    verb conjugation. An agent describing its own work on the *zero* experience
+    task ("the command records a journal entry") tripped it, and `series-005`
+    was killed at round two of three with $3.76 spent and no leak present: all
+    five hits were the agent talking about `fee`, `rename` and `zero`, none
+    about `cap`, the evaluation task blamed.
+
+    This costs real sensitivity and the trade is deliberate. Words whose stem is
+    shared with benign vocabulary no longer qualify on their own — `credited`
+    stops counting, because the `topup` experience prompt says `credits`. That
+    is correct rather than merely convenient: if the agent legitimately saw
+    `credits`, then writing `credited` is not evidence it saw an evaluation
+    prompt. The gate keeps its teeth through the genuinely unshared vocabulary —
+    `refunded`, `swept`, `merged`, `installments`, `reconcile` — and the two
+    positive-control tests still fire.
+    """
+    if word in benign:
+        return False
+    stem = _stem(word)
+    if stem in benign:
+        return False
+    return not any(_stem(b) == stem for b in benign)
+
+
 def benign_tokens() -> set[str]:
     """Individual words the agent may legitimately have seen."""
     tokens: set[str] = set()
@@ -102,7 +147,7 @@ def eval_signature() -> dict[str, set[str]]:
         signature[task.task_id] = {
             gram
             for gram in candidates
-            if any(word not in benign_words for word in _normalize(gram))
+            if any(is_novel_word(word, benign_words) for word in _normalize(gram))
         }
     return signature
 
