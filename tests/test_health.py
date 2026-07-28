@@ -143,3 +143,84 @@ def test_the_published_series_do_not_trip_it():
         if not path.exists():
             continue
         assert not provider_outage(load_tolerant(path)), name
+
+
+# --- transport retry: a blip must not read as an agent failure --------------
+
+def _trial(**kw):
+    from proving_ground.runner import Trial
+    t = Trial(task_id="t", pool="evaluation", arm="control", epoch=0, trial=0)
+    for k, v in kw.items():
+        setattr(t, k, v)
+    return t
+
+
+def test_a_transport_failure_is_retried_not_recorded(monkeypatch):
+    """A trial that never reached the model has produced no evidence.
+
+    Re-running it changes no measurement, and not re-running it is how three
+    series died: one dropped connection turned every later trial into an
+    aborted zero-call failure indistinguishable from the agent collapsing.
+    """
+    import proving_ground.runner as runner
+
+    calls = {"n": 0}
+
+    def fake_once(task, **kwargs):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            return _trial(status="aborted", model_calls=0,
+                          stella_error="transport error: connection reset")
+        return _trial(status="completed", model_calls=12, passed=True)
+
+    monkeypatch.setattr(runner, "_run_trial_once", fake_once)
+    monkeypatch.setattr(runner.time, "sleep", lambda _s: None)
+
+    out = runner.run_trial(object())
+    assert out.status == "completed", "the retry must surface the successful attempt"
+    assert calls["n"] == 3, f"expected two retries then success, got {calls['n']} attempts"
+
+
+def test_a_real_agent_failure_is_never_retried(monkeypatch):
+    """Only transport failures are re-run.
+
+    A stuck loop, a timeout and a plain wrong answer are real outcomes. Retrying
+    them would quietly re-roll results until the agent got lucky, which is the
+    difference between a flaky-test retry and scientific fraud.
+    """
+    import proving_ground.runner as runner
+
+    for status, err, calls_made in [
+        ("aborted", "stuck-loop detected", 0),
+        ("timeout", "exceeded 900s", 0),
+        ("completed", "", 31),
+    ]:
+        seen = {"n": 0}
+
+        def fake_once(task, **kwargs):
+            seen["n"] += 1
+            return _trial(status=status, model_calls=calls_made, stella_error=err)
+
+        monkeypatch.setattr(runner, "_run_trial_once", fake_once)
+        monkeypatch.setattr(runner.time, "sleep", lambda _s: None)
+        runner.run_trial(object())
+        assert seen["n"] == 1, f"{status!r} must not be retried, ran {seen['n']}x"
+
+
+def test_a_genuine_outage_still_drains_and_reports_dead(monkeypatch):
+    """The safety net stays. Retrying narrows what counts as an outage."""
+    import proving_ground.runner as runner
+    from proving_ground.health import is_dead_trial
+
+    def fake_once(task, **kwargs):
+        return _trial(status="aborted", model_calls=0,
+                      stella_error="transport error: no route to host")
+
+    monkeypatch.setattr(runner, "_run_trial_once", fake_once)
+    monkeypatch.setattr(runner.time, "sleep", lambda _s: None)
+
+    out = runner.run_trial(object())
+    assert is_dead_trial(out.as_row()), (
+        "after the retries drain, the trial must still read as dead so "
+        "health.provider_outage can stop the series"
+    )

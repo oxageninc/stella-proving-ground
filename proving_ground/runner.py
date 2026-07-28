@@ -124,7 +124,57 @@ def harvest_store(workspace: Path, store: Path) -> None:
     shutil.copytree(src, store, dirs_exist_ok=True)
 
 
-def run_trial(
+#: How long to wait between attempts when the provider is unreachable, and how
+#: many times to try. Sized for a blip, not an outage: ~2 minutes total, after
+#: which `health.provider_outage` still stops the series as designed.
+RETRY_BACKOFF_S = (5, 15, 45, 60)
+
+
+def _is_dead(result: "Trial") -> bool:
+    """The trial never reached the model — a transport failure, not an agent one."""
+    return (
+        result.status != "completed"
+        and result.model_calls == 0
+        and "transport error" in (result.stella_error or "")
+    )
+
+
+def run_trial(task: Task, **kwargs) -> "Trial":
+    """Run one trial, retrying through a transient provider failure.
+
+    Three separate series died today because the provider dropped mid-run:
+    every remaining trial was recorded as an aborted, zero-model-call failure,
+    which is indistinguishable from the agent collapsing. `health.provider_outage`
+    now catches that and stops the run — correct for a real outage, and far too
+    blunt for the ten-second blip that caused two of the three.
+
+    Retrying here converts a blip into a delay. A trial that never reached the
+    model has cost nothing and produced no evidence, so re-running it changes no
+    measurement: this retries *transport failures only*, never a genuine agent
+    failure, a timeout, or a stuck loop, all of which are real outcomes and are
+    returned untouched on the first attempt.
+
+    If the provider is genuinely down, the attempts drain in about two minutes
+    and the trial is returned dead, so the outage guard still fires and still
+    stops the series. This narrows what counts as an outage; it does not remove
+    the safety net.
+    """
+    last = None
+    for attempt, pause in enumerate((0, *RETRY_BACKOFF_S)):
+        if pause:
+            time.sleep(pause)
+        last = _run_trial_once(task, **kwargs)
+        if not _is_dead(last):
+            return last
+        if attempt < len(RETRY_BACKOFF_S):
+            last.stella_error = (
+                f"{last.stella_error} [retrying transport failure, "
+                f"attempt {attempt + 1}]"
+            )[:300]
+    return last
+
+
+def _run_trial_once(
     task: Task,
     *,
     arm: str,
