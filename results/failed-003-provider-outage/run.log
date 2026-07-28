@@ -1,0 +1,866 @@
+{
+  "model": "z-ai/glm-4.7-flash",
+  "reflection_model": "google/gemini-2.5-flash-lite",
+  "provider": "openrouter",
+  "reasoning": "off",
+  "budget_usd": 0.25,
+  "headless_scope_bypass": true,
+  "pump_proposals": true,
+  "stella_binary": "/Users/macanderson/Projects/stella/target/release/stella",
+  "stella_commit": "41099ef8d6eaaabfc251753453e785a424e2bed2",
+  "stella_version": "stella 0.5.61",
+  "binary_sha256": "47c46437b3fb1d41cae604662f0436f757cd0b3c38881c206c086548fd39a54d",
+  "harness_commit": "11a49386b26935850ad78b475712bf9bbcac09e4",
+  "task_pool_digest": "a01e7a2175573161",
+  "lifecycle_enabled": true
+}
+
+=== epoch 0 ===
+  treatment: store 0 memories / 0 episodes / 0 records — leak scan clean — 0 stored values scanned against 499 evaluation-only n-grams
+    eval treatment E0 eval-02-sweep#4: fail $0.0029
+    eval treatment E0 eval-02-sweep#1: fail $0.0029
+    eval treatment E0 eval-03-interest#1: fail $0.0029
+    eval treatment E0 eval-02-sweep#2: fail $0.0053
+    eval treatment E0 eval-01-refund#0: PASS $0.0068
+    eval treatment E0 eval-02-sweep#0: PASS $0.0053
+    eval treatment E0 eval-02-sweep#3: PASS $0.0091
+    eval treatment E0 eval-01-refund#3: PASS $0.0069
+    eval treatment E0 eval-01-refund#1: PASS $0.0087
+    eval treatment E0 eval-01-refund#2: PASS $0.0096
+    eval treatment E0 eval-03-interest#4: fail $0.0048
+    eval treatment E0 eval-03-interest#2: fail $0.0047
+    eval treatment E0 eval-01-refund#4: PASS $0.0132
+    eval treatment E0 eval-03-interest#0: fail $0.0067
+    eval treatment E0 eval-03-interest#3: fail $0.0059
+    eval treatment E0 eval-04-split#1: PASS $0.0074
+    eval treatment E0 eval-05-statement#3: PASS $0.0042
+    eval treatment E0 eval-05-statement#2: PASS $0.0036
+    eval treatment E0 eval-04-split#3: PASS $0.0073
+    eval treatment E0 eval-05-statement#1: PASS $0.0052
+    eval treatment E0 eval-04-split#2: PASS $0.0123
+    eval treatment E0 eval-05-statement#4: PASS $0.0063
+    eval treatment E0 eval-04-split#0: PASS $0.0103
+    eval treatment E0 eval-04-split#4: PASS $0.0110
+    eval treatment E0 eval-06-merge#3: fail $0.0049
+    eval treatment E0 eval-06-merge#1: PASS $0.0057
+    eval treatment E0 eval-06-merge#4: PASS $0.0069
+    eval treatment E0 eval-07-tax#3: fail $0.0051
+    eval treatment E0 eval-05-statement#0: PASS $0.0135
+    eval treatment E0 eval-06-merge#2: PASS $0.0093
+    eval treatment E0 eval-06-merge#0: PASS $0.0519
+    eval treatment E0 eval-08-installments#0: fail $0.0029
+    eval treatment E0 eval-08-installments#1: PASS $0.0028
+    eval treatment E0 eval-08-installments#2: fail $0.0028
+    eval treatment E0 eval-07-tax#4: PASS $0.0042
+    eval treatment E0 eval-08-installments#4: fail $0.0166
+    eval treatment E0 eval-08-installments#3: PASS $0.0050
+    eval treatment E0 eval-09-reconcile#3: PASS $0.0066
+    eval treatment E0 eval-09-reconcile#2: PASS $0.0239
+    eval treatment E0 eval-09-reconcile#4: PASS $0.0042
+    eval treatment E0 eval-10-cap#0: PASS $0.0040
+    eval treatment E0 eval-07-tax#0: PASS $0.0177
+    eval treatment E0 eval-10-cap#1: PASS $0.0045
+    eval treatment E0 eval-10-cap#2: PASS $0.0030
+    eval treatment E0 eval-07-tax#1: PASS $0.0150
+    eval treatment E0 eval-10-cap#3: PASS $0.0059
+    eval treatment E0 eval-09-reconcile#0: PASS $0.0233
+    eval treatment E0 eval-09-reconcile#1: PASS $0.0142
+    eval treatment E0 eval-11-share#0: PASS $0.0174
+    eval treatment E0 eval-10-cap#4: PASS $0.0064
+    eval treatment E0 eval-11-share#1: PASS $0.0076
+    eval treatment E0 eval-11-share#2: fail $0.0077
+    eval treatment E0 eval-12-largest#1: fail $0.0028
+    eval treatment E0 eval-11-share#4: fail $0.0034
+    eval treatment E0 eval-11-share#3: fail $0.0086
+    eval treatment E0 eval-07-tax#2: PASS $0.0172
+    eval treatment E0 eval-12-largest#4: PASS $0.0072
+    eval treatment E0 eval-12-largest#2: PASS $0.0099
+    eval treatment E0 eval-12-largest#3: PASS $0.0102
+    eval treatment E0 eval-12-largest#0: PASS $0.0211
+  treatment E0: 43/60 solved
+  control: store 0 memories / 0 episodes / 0 records
+    eval control E0 eval-01-refund#1: fail $0.0000
+    eval control E0 eval-01-refund#2: fail $0.0000
+    eval control E0 eval-02-sweep#1: fail $0.0000
+    eval control E0 eval-01-refund#0: fail $0.0000
+    eval control E0 eval-02-sweep#4: fail $0.0000
+    eval control E0 eval-02-sweep#3: fail $0.0000
+    eval control E0 eval-02-sweep#2: fail $0.0000
+    eval control E0 eval-02-sweep#0: fail $0.0000
+    eval control E0 eval-01-refund#4: fail $0.0000
+    eval control E0 eval-01-refund#3: fail $0.0000
+    eval control E0 eval-03-interest#0: fail $0.0000
+    eval control E0 eval-03-interest#3: fail $0.0000
+    eval control E0 eval-03-interest#1: fail $0.0000
+    eval control E0 eval-03-interest#2: fail $0.0000
+    eval control E0 eval-04-split#0: fail $0.0000
+    eval control E0 eval-03-interest#4: fail $0.0000
+    eval control E0 eval-04-split#1: fail $0.0000
+    eval control E0 eval-04-split#2: fail $0.0000
+    eval control E0 eval-04-split#3: fail $0.0000
+    eval control E0 eval-04-split#4: fail $0.0000
+    eval control E0 eval-05-statement#0: fail $0.0000
+    eval control E0 eval-05-statement#4: fail $0.0000
+    eval control E0 eval-05-statement#1: fail $0.0000
+    eval control E0 eval-06-merge#0: fail $0.0000
+    eval control E0 eval-05-statement#2: fail $0.0000
+    eval control E0 eval-05-statement#3: fail $0.0000
+    eval control E0 eval-06-merge#2: fail $0.0000
+    eval control E0 eval-06-merge#3: fail $0.0000
+    eval control E0 eval-07-tax#2: fail $0.0000
+    eval control E0 eval-06-merge#1: fail $0.0000
+    eval control E0 eval-06-merge#4: fail $0.0000
+    eval control E0 eval-07-tax#0: fail $0.0000
+    eval control E0 eval-07-tax#1: fail $0.0000
+    eval control E0 eval-08-installments#1: fail $0.0000
+    eval control E0 eval-07-tax#4: fail $0.0000
+    eval control E0 eval-07-tax#3: fail $0.0000
+    eval control E0 eval-08-installments#0: fail $0.0000
+    eval control E0 eval-08-installments#2: fail $0.0000
+    eval control E0 eval-08-installments#3: fail $0.0000
+    eval control E0 eval-08-installments#4: fail $0.0000
+    eval control E0 eval-09-reconcile#0: fail $0.0000
+    eval control E0 eval-09-reconcile#3: fail $0.0000
+    eval control E0 eval-09-reconcile#1: fail $0.0000
+    eval control E0 eval-09-reconcile#2: fail $0.0000
+    eval control E0 eval-10-cap#0: fail $0.0000
+    eval control E0 eval-09-reconcile#4: fail $0.0000
+    eval control E0 eval-10-cap#1: fail $0.0000
+    eval control E0 eval-10-cap#3: fail $0.0000
+    eval control E0 eval-10-cap#2: fail $0.0000
+    eval control E0 eval-11-share#2: fail $0.0000
+    eval control E0 eval-11-share#1: fail $0.0000
+    eval control E0 eval-10-cap#4: fail $0.0000
+    eval control E0 eval-11-share#3: fail $0.0000
+    eval control E0 eval-11-share#4: fail $0.0000
+    eval control E0 eval-11-share#0: fail $0.0000
+    eval control E0 eval-12-largest#0: fail $0.0000
+    eval control E0 eval-12-largest#1: fail $0.0000
+    eval control E0 eval-12-largest#3: fail $0.0000
+    eval control E0 eval-12-largest#4: fail $0.0000
+    eval control E0 eval-12-largest#2: fail $0.0000
+  control E0: 0/60 solved
+  sham: store 0 memories / 0 episodes / 0 records — leak scan clean — 0 stored values scanned against 499 evaluation-only n-grams
+    eval sham E0 eval-02-sweep#3: fail $0.0000
+    eval sham E0 eval-02-sweep#1: fail $0.0000
+    eval sham E0 eval-02-sweep#4: fail $0.0000
+    eval sham E0 eval-01-refund#1: fail $0.0000
+    eval sham E0 eval-02-sweep#0: fail $0.0000
+    eval sham E0 eval-01-refund#4: fail $0.0000
+    eval sham E0 eval-01-refund#0: fail $0.0000
+    eval sham E0 eval-02-sweep#2: fail $0.0000
+    eval sham E0 eval-01-refund#3: fail $0.0000
+    eval sham E0 eval-01-refund#2: fail $0.0000
+    eval sham E0 eval-03-interest#0: fail $0.0000
+    eval sham E0 eval-03-interest#2: fail $0.0000
+    eval sham E0 eval-04-split#0: fail $0.0000
+    eval sham E0 eval-03-interest#4: fail $0.0000
+    eval sham E0 eval-04-split#3: fail $0.0000
+    eval sham E0 eval-03-interest#1: fail $0.0000
+    eval sham E0 eval-04-split#2: fail $0.0000
+    eval sham E0 eval-04-split#4: fail $0.0000
+    eval sham E0 eval-03-interest#3: fail $0.0000
+    eval sham E0 eval-04-split#1: fail $0.0000
+    eval sham E0 eval-05-statement#0: fail $0.0000
+    eval sham E0 eval-05-statement#1: fail $0.0000
+    eval sham E0 eval-05-statement#2: fail $0.0000
+    eval sham E0 eval-06-merge#0: fail $0.0000
+    eval sham E0 eval-05-statement#3: fail $0.0000
+    eval sham E0 eval-06-merge#1: fail $0.0000
+    eval sham E0 eval-06-merge#2: fail $0.0000
+    eval sham E0 eval-05-statement#4: fail $0.0000
+    eval sham E0 eval-06-merge#3: fail $0.0000
+    eval sham E0 eval-06-merge#4: fail $0.0000
+    eval sham E0 eval-07-tax#0: fail $0.0000
+    eval sham E0 eval-07-tax#1: fail $0.0000
+    eval sham E0 eval-07-tax#3: fail $0.0000
+    eval sham E0 eval-07-tax#2: fail $0.0000
+    eval sham E0 eval-07-tax#4: fail $0.0000
+    eval sham E0 eval-08-installments#0: fail $0.0000
+    eval sham E0 eval-08-installments#4: fail $0.0000
+    eval sham E0 eval-08-installments#1: fail $0.0000
+    eval sham E0 eval-09-reconcile#0: fail $0.0000
+    eval sham E0 eval-08-installments#2: fail $0.0000
+    eval sham E0 eval-08-installments#3: fail $0.0000
+    eval sham E0 eval-09-reconcile#1: fail $0.0000
+    eval sham E0 eval-09-reconcile#3: fail $0.0000
+    eval sham E0 eval-09-reconcile#4: fail $0.0000
+    eval sham E0 eval-09-reconcile#2: fail $0.0000
+    eval sham E0 eval-10-cap#3: fail $0.0000
+    eval sham E0 eval-10-cap#0: fail $0.0000
+    eval sham E0 eval-11-share#0: fail $0.0000
+    eval sham E0 eval-10-cap#1: fail $0.0000
+    eval sham E0 eval-10-cap#2: fail $0.0000
+    eval sham E0 eval-10-cap#4: fail $0.0000
+    eval sham E0 eval-11-share#4: fail $0.0000
+    eval sham E0 eval-11-share#1: fail $0.0000
+    eval sham E0 eval-11-share#2: fail $0.0000
+    eval sham E0 eval-11-share#3: fail $0.0000
+    eval sham E0 eval-12-largest#0: fail $0.0000
+    eval sham E0 eval-12-largest#1: fail $0.0000
+    eval sham E0 eval-12-largest#2: fail $0.0000
+    eval sham E0 eval-12-largest#3: fail $0.0000
+    eval sham E0 eval-12-largest#4: fail $0.0000
+  sham E0: 0/60 solved
+  working 5 experience tasks for treatment
+  working 5 experience tasks for sham
+    experience sham sham-01-indent: fail $0.0000
+    experience treatment exp-01-withdraw: fail $0.0000
+    experience treatment exp-02-open: fail $0.0000
+    experience sham sham-02-dedent: fail $0.0000
+    experience treatment exp-03-close: fail $0.0000
+    experience sham sham-03-upper: fail $0.0000
+    experience sham sham-04-numbers: fail $0.0000
+    experience treatment exp-04-list: fail $0.0000
+    experience sham sham-05-strip: fail $0.0000
+    pump: [2m·[0m no reflection log yet — nothing to mine.
+    experience treatment exp-05-total: fail $0.0000
+    pump: [2m·[0m no reflection log yet — nothing to mine.
+
+=== epoch 1 ===
+  treatment: store 0 memories / 0 episodes / 0 records — leak scan clean — 243 stored values scanned against 499 evaluation-only n-grams
+    eval treatment E1 eval-02-sweep#2: fail $0.0000
+    eval treatment E1 eval-02-sweep#1: fail $0.0000
+    eval treatment E1 eval-02-sweep#4: fail $0.0000
+    eval treatment E1 eval-01-refund#0: fail $0.0000
+    eval treatment E1 eval-01-refund#3: fail $0.0000
+    eval treatment E1 eval-02-sweep#0: fail $0.0000
+    eval treatment E1 eval-01-refund#2: fail $0.0000
+    eval treatment E1 eval-01-refund#1: fail $0.0000
+    eval treatment E1 eval-02-sweep#3: fail $0.0000
+    eval treatment E1 eval-01-refund#4: fail $0.0000
+    eval treatment E1 eval-03-interest#1: fail $0.0000
+    eval treatment E1 eval-03-interest#4: fail $0.0000
+    eval treatment E1 eval-03-interest#0: fail $0.0000
+    eval treatment E1 eval-03-interest#2: fail $0.0000
+    eval treatment E1 eval-03-interest#3: fail $0.0000
+    eval treatment E1 eval-04-split#1: fail $0.0000
+    eval treatment E1 eval-04-split#3: fail $0.0000
+    eval treatment E1 eval-04-split#2: fail $0.0000
+    eval treatment E1 eval-04-split#0: fail $0.0000
+    eval treatment E1 eval-04-split#4: fail $0.0000
+    eval treatment E1 eval-05-statement#0: fail $0.0000
+    eval treatment E1 eval-05-statement#1: fail $0.0000
+    eval treatment E1 eval-05-statement#2: fail $0.0000
+    eval treatment E1 eval-06-merge#1: fail $0.0000
+    eval treatment E1 eval-06-merge#3: fail $0.0000
+    eval treatment E1 eval-05-statement#3: fail $0.0000
+    eval treatment E1 eval-05-statement#4: fail $0.0000
+    eval treatment E1 eval-06-merge#2: fail $0.0000
+    eval treatment E1 eval-06-merge#0: fail $0.0000
+    eval treatment E1 eval-07-tax#1: fail $0.0000
+    eval treatment E1 eval-06-merge#4: fail $0.0000
+    eval treatment E1 eval-07-tax#2: fail $0.0000
+    eval treatment E1 eval-07-tax#3: fail $0.0000
+    eval treatment E1 eval-07-tax#0: fail $0.0000
+    eval treatment E1 eval-07-tax#4: fail $0.0000
+    eval treatment E1 eval-08-installments#3: fail $0.0000
+    eval treatment E1 eval-08-installments#2: fail $0.0000
+    eval treatment E1 eval-08-installments#0: fail $0.0000
+    eval treatment E1 eval-08-installments#1: fail $0.0000
+    eval treatment E1 eval-09-reconcile#1: fail $0.0000
+    eval treatment E1 eval-08-installments#4: fail $0.0000
+    eval treatment E1 eval-09-reconcile#0: fail $0.0000
+    eval treatment E1 eval-09-reconcile#4: fail $0.0000
+    eval treatment E1 eval-10-cap#1: fail $0.0000
+    eval treatment E1 eval-09-reconcile#2: fail $0.0000
+    eval treatment E1 eval-10-cap#2: fail $0.0000
+    eval treatment E1 eval-09-reconcile#3: fail $0.0000
+    eval treatment E1 eval-10-cap#0: fail $0.0000
+    eval treatment E1 eval-10-cap#3: fail $0.0000
+    eval treatment E1 eval-10-cap#4: fail $0.0000
+    eval treatment E1 eval-11-share#1: fail $0.0000
+    eval treatment E1 eval-12-largest#0: fail $0.0000
+    eval treatment E1 eval-12-largest#1: fail $0.0000
+    eval treatment E1 eval-11-share#0: fail $0.0000
+    eval treatment E1 eval-11-share#4: fail $0.0000
+    eval treatment E1 eval-11-share#3: fail $0.0000
+    eval treatment E1 eval-12-largest#2: fail $0.0000
+    eval treatment E1 eval-11-share#2: fail $0.0000
+    eval treatment E1 eval-12-largest#3: fail $0.0000
+    eval treatment E1 eval-12-largest#4: fail $0.0000
+  treatment E1: 0/60 solved
+  control: store 0 memories / 0 episodes / 0 records
+    eval control E1 eval-01-refund#4: fail $0.0000
+    eval control E1 eval-01-refund#0: fail $0.0000
+    eval control E1 eval-01-refund#3: fail $0.0000
+    eval control E1 eval-01-refund#2: fail $0.0000
+    eval control E1 eval-01-refund#1: fail $0.0000
+    eval control E1 eval-02-sweep#4: fail $0.0000
+    eval control E1 eval-02-sweep#0: fail $0.0000
+    eval control E1 eval-02-sweep#3: fail $0.0000
+    eval control E1 eval-02-sweep#1: fail $0.0000
+    eval control E1 eval-02-sweep#2: fail $0.0000
+    eval control E1 eval-03-interest#1: fail $0.0000
+    eval control E1 eval-03-interest#2: fail $0.0000
+    eval control E1 eval-03-interest#0: fail $0.0000
+    eval control E1 eval-03-interest#3: fail $0.0000
+    eval control E1 eval-03-interest#4: fail $0.0000
+    eval control E1 eval-04-split#2: fail $0.0000
+    eval control E1 eval-04-split#1: fail $0.0000
+    eval control E1 eval-04-split#0: fail $0.0000
+    eval control E1 eval-04-split#3: fail $0.0000
+    eval control E1 eval-04-split#4: fail $0.0000
+    eval control E1 eval-05-statement#1: fail $0.0000
+    eval control E1 eval-05-statement#2: fail $0.0000
+    eval control E1 eval-05-statement#0: fail $0.0000
+    eval control E1 eval-05-statement#4: fail $0.0000
+    eval control E1 eval-05-statement#3: fail $0.0000
+    eval control E1 eval-06-merge#0: fail $0.0000
+    eval control E1 eval-06-merge#3: fail $0.0000
+    eval control E1 eval-06-merge#1: fail $0.0000
+    eval control E1 eval-06-merge#2: fail $0.0000
+    eval control E1 eval-06-merge#4: fail $0.0000
+    eval control E1 eval-07-tax#1: fail $0.0000
+    eval control E1 eval-07-tax#0: fail $0.0000
+    eval control E1 eval-07-tax#3: fail $0.0000
+    eval control E1 eval-07-tax#4: fail $0.0000
+    eval control E1 eval-08-installments#1: fail $0.0000
+    eval control E1 eval-07-tax#2: fail $0.0000
+    eval control E1 eval-08-installments#0: fail $0.0000
+    eval control E1 eval-08-installments#3: fail $0.0000
+    eval control E1 eval-08-installments#2: fail $0.0000
+    eval control E1 eval-09-reconcile#0: fail $0.0000
+    eval control E1 eval-09-reconcile#1: fail $0.0000
+    eval control E1 eval-08-installments#4: fail $0.0000
+    eval control E1 eval-09-reconcile#3: fail $0.0000
+    eval control E1 eval-09-reconcile#2: fail $0.0000
+    eval control E1 eval-10-cap#1: fail $0.0000
+    eval control E1 eval-09-reconcile#4: fail $0.0000
+    eval control E1 eval-10-cap#0: fail $0.0000
+    eval control E1 eval-10-cap#2: fail $0.0000
+    eval control E1 eval-10-cap#4: fail $0.0000
+    eval control E1 eval-10-cap#3: fail $0.0000
+    eval control E1 eval-11-share#2: fail $0.0000
+    eval control E1 eval-11-share#3: fail $0.0000
+    eval control E1 eval-11-share#0: fail $0.0000
+    eval control E1 eval-11-share#1: fail $0.0000
+    eval control E1 eval-12-largest#0: fail $0.0000
+    eval control E1 eval-12-largest#1: fail $0.0000
+    eval control E1 eval-11-share#4: fail $0.0000
+    eval control E1 eval-12-largest#2: fail $0.0000
+    eval control E1 eval-12-largest#3: fail $0.0000
+    eval control E1 eval-12-largest#4: fail $0.0000
+  control E1: 0/60 solved
+  sham: store 0 memories / 0 episodes / 0 records — leak scan clean — 225 stored values scanned against 499 evaluation-only n-grams
+    eval sham E1 eval-02-sweep#3: fail $0.0000
+    eval sham E1 eval-02-sweep#0: fail $0.0000
+    eval sham E1 eval-02-sweep#2: fail $0.0000
+    eval sham E1 eval-01-refund#0: fail $0.0000
+    eval sham E1 eval-01-refund#4: fail $0.0000
+    eval sham E1 eval-01-refund#3: fail $0.0000
+    eval sham E1 eval-02-sweep#1: fail $0.0000
+    eval sham E1 eval-02-sweep#4: fail $0.0000
+    eval sham E1 eval-01-refund#1: fail $0.0000
+    eval sham E1 eval-01-refund#2: fail $0.0000
+    eval sham E1 eval-03-interest#1: fail $0.0000
+    eval sham E1 eval-03-interest#0: fail $0.0000
+    eval sham E1 eval-03-interest#3: fail $0.0000
+    eval sham E1 eval-03-interest#4: fail $0.0000
+    eval sham E1 eval-04-split#2: fail $0.0000
+    eval sham E1 eval-03-interest#2: fail $0.0000
+    eval sham E1 eval-04-split#4: fail $0.0000
+    eval sham E1 eval-04-split#0: fail $0.0000
+    eval sham E1 eval-04-split#1: fail $0.0000
+    eval sham E1 eval-04-split#3: fail $0.0000
+    eval sham E1 eval-05-statement#0: fail $0.0000
+    eval sham E1 eval-05-statement#2: fail $0.0000
+    eval sham E1 eval-05-statement#1: fail $0.0000
+    eval sham E1 eval-05-statement#3: fail $0.0000
+    eval sham E1 eval-05-statement#4: fail $0.0000
+    eval sham E1 eval-06-merge#0: fail $0.0000
+    eval sham E1 eval-06-merge#3: fail $0.0000
+    eval sham E1 eval-06-merge#2: fail $0.0000
+    eval sham E1 eval-06-merge#1: fail $0.0000
+    eval sham E1 eval-06-merge#4: fail $0.0000
+    eval sham E1 eval-07-tax#0: fail $0.0000
+    eval sham E1 eval-07-tax#2: fail $0.0000
+    eval sham E1 eval-07-tax#3: fail $0.0000
+    eval sham E1 eval-08-installments#2: fail $0.0000
+    eval sham E1 eval-07-tax#1: fail $0.0000
+    eval sham E1 eval-08-installments#0: fail $0.0000
+    eval sham E1 eval-08-installments#4: fail $0.0000
+    eval sham E1 eval-07-tax#4: fail $0.0000
+    eval sham E1 eval-08-installments#1: fail $0.0000
+    eval sham E1 eval-08-installments#3: fail $0.0000
+    eval sham E1 eval-09-reconcile#1: fail $0.0000
+    eval sham E1 eval-09-reconcile#0: fail $0.0000
+    eval sham E1 eval-10-cap#0: fail $0.0000
+    eval sham E1 eval-10-cap#2: fail $0.0000
+    eval sham E1 eval-09-reconcile#2: fail $0.0000
+    eval sham E1 eval-09-reconcile#3: fail $0.0000
+    eval sham E1 eval-09-reconcile#4: fail $0.0000
+    eval sham E1 eval-10-cap#4: fail $0.0000
+    eval sham E1 eval-10-cap#1: fail $0.0000
+    eval sham E1 eval-11-share#1: fail $0.0000
+    eval sham E1 eval-10-cap#3: fail $0.0000
+    eval sham E1 eval-11-share#0: fail $0.0000
+    eval sham E1 eval-11-share#4: fail $0.0000
+    eval sham E1 eval-11-share#3: fail $0.0000
+    eval sham E1 eval-12-largest#1: fail $0.0000
+    eval sham E1 eval-12-largest#3: fail $0.0000
+    eval sham E1 eval-11-share#2: fail $0.0000
+    eval sham E1 eval-12-largest#0: fail $0.0000
+    eval sham E1 eval-12-largest#2: fail $0.0000
+    eval sham E1 eval-12-largest#4: fail $0.0000
+  sham E1: 0/60 solved
+  working 5 experience tasks for treatment
+  working 5 experience tasks for sham
+    experience treatment exp-06-fee: fail $0.0000
+    experience sham sham-06-collapse: fail $0.0000
+    experience treatment exp-07-rename: fail $0.0000
+    experience sham sham-07-tabs: fail $0.0000
+    experience treatment exp-08-count: fail $0.0000
+    experience sham sham-08-reverse: fail $0.0000
+    experience treatment exp-09-zero: fail $0.0000
+    experience sham sham-09-unique: fail $0.0000
+    experience treatment exp-10-topup: fail $0.0000
+    pump: [2m·[0m no reflection log yet — nothing to mine.
+    experience sham sham-10-trim: fail $0.0000
+    pump: [2m·[0m no reflection log yet — nothing to mine.
+
+=== epoch 2 ===
+  treatment: store 0 memories / 0 episodes / 0 records — leak scan clean — 469 stored values scanned against 499 evaluation-only n-grams
+    eval treatment E2 eval-02-sweep#3: fail $0.0000
+    eval treatment E2 eval-02-sweep#0: fail $0.0000
+    eval treatment E2 eval-01-refund#0: fail $0.0000
+    eval treatment E2 eval-02-sweep#2: fail $0.0000
+    eval treatment E2 eval-01-refund#3: fail $0.0000
+    eval treatment E2 eval-01-refund#4: fail $0.0000
+    eval treatment E2 eval-02-sweep#4: fail $0.0000
+    eval treatment E2 eval-01-refund#1: fail $0.0000
+    eval treatment E2 eval-02-sweep#1: fail $0.0000
+    eval treatment E2 eval-01-refund#2: fail $0.0000
+    eval treatment E2 eval-03-interest#2: fail $0.0000
+    eval treatment E2 eval-03-interest#1: fail $0.0000
+    eval treatment E2 eval-03-interest#0: fail $0.0000
+    eval treatment E2 eval-04-split#4: fail $0.0000
+    eval treatment E2 eval-03-interest#3: fail $0.0000
+    eval treatment E2 eval-04-split#3: fail $0.0000
+    eval treatment E2 eval-04-split#0: fail $0.0000
+    eval treatment E2 eval-03-interest#4: fail $0.0000
+    eval treatment E2 eval-04-split#2: fail $0.0000
+    eval treatment E2 eval-04-split#1: fail $0.0000
+    eval treatment E2 eval-05-statement#0: fail $0.0000
+    eval treatment E2 eval-05-statement#2: fail $0.0000
+    eval treatment E2 eval-05-statement#1: fail $0.0000
+    eval treatment E2 eval-05-statement#3: fail $0.0000
+    eval treatment E2 eval-06-merge#2: fail $0.0000
+    eval treatment E2 eval-06-merge#1: fail $0.0000
+    eval treatment E2 eval-07-tax#0: fail $0.0000
+    eval treatment E2 eval-05-statement#4: fail $0.0000
+    eval treatment E2 eval-06-merge#0: fail $0.0000
+    eval treatment E2 eval-06-merge#4: fail $0.0000
+    eval treatment E2 eval-06-merge#3: fail $0.0000
+    eval treatment E2 eval-07-tax#1: fail $0.0000
+    eval treatment E2 eval-07-tax#3: fail $0.0000
+    eval treatment E2 eval-07-tax#2: fail $0.0000
+    eval treatment E2 eval-08-installments#0: fail $0.0000
+    eval treatment E2 eval-08-installments#3: fail $0.0000
+    eval treatment E2 eval-08-installments#2: fail $0.0000
+    eval treatment E2 eval-07-tax#4: fail $0.0000
+    eval treatment E2 eval-09-reconcile#1: fail $0.0000
+    eval treatment E2 eval-08-installments#1: fail $0.0000
+    eval treatment E2 eval-09-reconcile#0: fail $0.0000
+    eval treatment E2 eval-08-installments#4: fail $0.0000
+    eval treatment E2 eval-09-reconcile#2: fail $0.0000
+    eval treatment E2 eval-09-reconcile#3: fail $0.0000
+    eval treatment E2 eval-10-cap#0: fail $0.0000
+    eval treatment E2 eval-10-cap#2: fail $0.0000
+    eval treatment E2 eval-09-reconcile#4: fail $0.0000
+    eval treatment E2 eval-10-cap#1: fail $0.0000
+    eval treatment E2 eval-10-cap#3: fail $0.0000
+    eval treatment E2 eval-11-share#1: fail $0.0000
+    eval treatment E2 eval-10-cap#4: fail $0.0000
+    eval treatment E2 eval-11-share#0: fail $0.0000
+    eval treatment E2 eval-12-largest#0: fail $0.0000
+    eval treatment E2 eval-11-share#2: fail $0.0000
+    eval treatment E2 eval-11-share#4: fail $0.0000
+    eval treatment E2 eval-11-share#3: fail $0.0000
+    eval treatment E2 eval-12-largest#1: fail $0.0000
+    eval treatment E2 eval-12-largest#2: fail $0.0000
+    eval treatment E2 eval-12-largest#4: fail $0.0000
+    eval treatment E2 eval-12-largest#3: fail $0.0000
+  treatment E2: 0/60 solved
+  control: store 0 memories / 0 episodes / 0 records
+    eval control E2 eval-01-refund#1: fail $0.0000
+    eval control E2 eval-02-sweep#2: fail $0.0000
+    eval control E2 eval-01-refund#3: fail $0.0000
+    eval control E2 eval-02-sweep#3: fail $0.0000
+    eval control E2 eval-01-refund#2: fail $0.0000
+    eval control E2 eval-02-sweep#1: fail $0.0000
+    eval control E2 eval-02-sweep#4: fail $0.0000
+    eval control E2 eval-01-refund#4: fail $0.0000
+    eval control E2 eval-02-sweep#0: fail $0.0000
+    eval control E2 eval-01-refund#0: fail $0.0000
+    eval control E2 eval-03-interest#0: fail $0.0000
+    eval control E2 eval-03-interest#1: fail $0.0000
+    eval control E2 eval-03-interest#4: fail $0.0000
+    eval control E2 eval-04-split#0: fail $0.0000
+    eval control E2 eval-03-interest#2: fail $0.0000
+    eval control E2 eval-04-split#1: fail $0.0000
+    eval control E2 eval-03-interest#3: fail $0.0000
+    eval control E2 eval-04-split#3: fail $0.0000
+    eval control E2 eval-04-split#2: fail $0.0000
+    eval control E2 eval-04-split#4: fail $0.0000
+    eval control E2 eval-05-statement#1: fail $0.0000
+    eval control E2 eval-05-statement#2: fail $0.0000
+    eval control E2 eval-05-statement#0: fail $0.0000
+    eval control E2 eval-05-statement#3: fail $0.0000
+    eval control E2 eval-06-merge#4: fail $0.0000
+    eval control E2 eval-05-statement#4: fail $0.0000
+    eval control E2 eval-06-merge#0: fail $0.0000
+    eval control E2 eval-06-merge#3: fail $0.0000
+    eval control E2 eval-06-merge#1: fail $0.0000
+    eval control E2 eval-06-merge#2: fail $0.0000
+    eval control E2 eval-07-tax#2: fail $0.0000
+    eval control E2 eval-07-tax#3: fail $0.0000
+    eval control E2 eval-08-installments#1: fail $0.0000
+    eval control E2 eval-08-installments#2: fail $0.0000
+    eval control E2 eval-07-tax#4: fail $0.0000
+    eval control E2 eval-07-tax#1: fail $0.0000
+    eval control E2 eval-07-tax#0: fail $0.0000
+    eval control E2 eval-08-installments#0: fail $0.0000
+    eval control E2 eval-08-installments#4: fail $0.0000
+    eval control E2 eval-08-installments#3: fail $0.0000
+    eval control E2 eval-09-reconcile#4: fail $0.0000
+    eval control E2 eval-09-reconcile#3: fail $0.0000
+    eval control E2 eval-09-reconcile#1: fail $0.0000
+    eval control E2 eval-10-cap#2: fail $0.0000
+    eval control E2 eval-09-reconcile#0: fail $0.0000
+    eval control E2 eval-09-reconcile#2: fail $0.0000
+    eval control E2 eval-10-cap#3: fail $0.0000
+    eval control E2 eval-10-cap#4: fail $0.0000
+    eval control E2 eval-10-cap#0: fail $0.0000
+    eval control E2 eval-10-cap#1: fail $0.0000
+    eval control E2 eval-11-share#0: fail $0.0000
+    eval control E2 eval-11-share#4: fail $0.0000
+    eval control E2 eval-11-share#1: fail $0.0000
+    eval control E2 eval-11-share#3: fail $0.0000
+    eval control E2 eval-12-largest#3: fail $0.0000
+    eval control E2 eval-12-largest#4: fail $0.0000
+    eval control E2 eval-12-largest#2: fail $0.0000
+    eval control E2 eval-11-share#2: fail $0.0000
+    eval control E2 eval-12-largest#0: fail $0.0000
+    eval control E2 eval-12-largest#1: fail $0.0000
+  control E2: 0/60 solved
+  sham: store 0 memories / 0 episodes / 0 records — leak scan clean — 445 stored values scanned against 499 evaluation-only n-grams
+    eval sham E2 eval-01-refund#2: fail $0.0000
+    eval sham E2 eval-02-sweep#0: fail $0.0000
+    eval sham E2 eval-01-refund#3: fail $0.0000
+    eval sham E2 eval-02-sweep#3: fail $0.0000
+    eval sham E2 eval-01-refund#0: fail $0.0000
+    eval sham E2 eval-02-sweep#4: fail $0.0000
+    eval sham E2 eval-01-refund#1: fail $0.0000
+    eval sham E2 eval-01-refund#4: fail $0.0000
+    eval sham E2 eval-02-sweep#2: fail $0.0000
+    eval sham E2 eval-02-sweep#1: fail $0.0000
+    eval sham E2 eval-03-interest#0: fail $0.0000
+    eval sham E2 eval-03-interest#1: fail $0.0000
+    eval sham E2 eval-03-interest#3: fail $0.0000
+    eval sham E2 eval-04-split#0: fail $0.0000
+    eval sham E2 eval-03-interest#2: fail $0.0000
+    eval sham E2 eval-04-split#3: fail $0.0000
+    eval sham E2 eval-04-split#4: fail $0.0000
+    eval sham E2 eval-04-split#2: fail $0.0000
+    eval sham E2 eval-03-interest#4: fail $0.0000
+    eval sham E2 eval-04-split#1: fail $0.0000
+    eval sham E2 eval-05-statement#1: fail $0.0000
+    eval sham E2 eval-05-statement#3: fail $0.0000
+    eval sham E2 eval-05-statement#0: fail $0.0000
+    eval sham E2 eval-05-statement#2: fail $0.0000
+    eval sham E2 eval-06-merge#0: fail $0.0000
+    eval sham E2 eval-06-merge#1: fail $0.0000
+    eval sham E2 eval-06-merge#3: fail $0.0000
+    eval sham E2 eval-05-statement#4: fail $0.0000
+    eval sham E2 eval-06-merge#4: fail $0.0000
+    eval sham E2 eval-06-merge#2: fail $0.0000
+    eval sham E2 eval-07-tax#0: fail $0.0000
+    eval sham E2 eval-07-tax#1: fail $0.0000
+    eval sham E2 eval-07-tax#4: fail $0.0000
+    eval sham E2 eval-08-installments#0: fail $0.0000
+    eval sham E2 eval-07-tax#2: fail $0.0000
+    eval sham E2 eval-07-tax#3: fail $0.0000
+    eval sham E2 eval-08-installments#2: fail $0.0000
+    eval sham E2 eval-08-installments#3: fail $0.0000
+    eval sham E2 eval-08-installments#4: fail $0.0000
+    eval sham E2 eval-08-installments#1: fail $0.0000
+    eval sham E2 eval-09-reconcile#0: fail $0.0000
+    eval sham E2 eval-09-reconcile#1: fail $0.0000
+    eval sham E2 eval-09-reconcile#4: fail $0.0000
+    eval sham E2 eval-09-reconcile#3: fail $0.0000
+    eval sham E2 eval-09-reconcile#2: fail $0.0000
+    eval sham E2 eval-10-cap#2: fail $0.0000
+    eval sham E2 eval-10-cap#3: fail $0.0000
+    eval sham E2 eval-10-cap#1: fail $0.0000
+    eval sham E2 eval-10-cap#0: fail $0.0000
+    eval sham E2 eval-10-cap#4: fail $0.0000
+    eval sham E2 eval-11-share#1: fail $0.0000
+    eval sham E2 eval-11-share#0: fail $0.0000
+    eval sham E2 eval-12-largest#0: fail $0.0000
+    eval sham E2 eval-11-share#3: fail $0.0000
+    eval sham E2 eval-11-share#2: fail $0.0000
+    eval sham E2 eval-12-largest#2: fail $0.0000
+    eval sham E2 eval-11-share#4: fail $0.0000
+    eval sham E2 eval-12-largest#1: fail $0.0000
+    eval sham E2 eval-12-largest#4: fail $0.0000
+    eval sham E2 eval-12-largest#3: fail $0.0000
+  sham E2: 0/60 solved
+# Scoreboard
+
+Series pinned to `z-ai/glm-4.7-flash` via `openrouter`, Stella `stella 0.5.61` (`41099ef8d6ea`), task pool `a01e7a2175573161`.
+
+Evaluation pool is held out: it is measured and never learned from. Primary metric is resolution accuracy against a deterministic verifier. Pre-registered threshold for a result: **10%** absolute, paired, CI excluding zero.
+
+Reported beside it, and **exploratory rather than pre-registered**: effort per trial and how often the agent had to be steered. Finding 12 showed pass rate saturating on this pool while effort did not — an agent that always succeeds can still take 19 turns or 93 — so a scoreboard that reads only the accuracy row is blind to most of the signal it paid for.
+
+
+## Verdict
+
+**Accuracy (pre-registered): the claim is not supported — no detectable transfer.** treatment does not separate from control by more than the pre-registered threshold at the final epoch.
+
+
+**Effort and steering (exploratory): no detectable effort or steering difference (every CI spans zero).** Detail in *Effort* and *Steering* below.
+
+At the final epoch (E2), treatment − control = +0.000 (95% CI [+0.000, +0.000]); treatment − sham = +0.000 (95% CI [+0.000, +0.000]).
+
+Treatment moved -0.717 across the series against a control arm that drifted 0.000 on its own — treatment clears control's own run-to-run movement. Treatment regression rate: 1.000 (8 task-epochs lost).
+
+
+**Empirical null.** The control arm does no experience work and is wiped before every evaluation, so its 3 epochs are the same experiment repeated. It ranged 0.000 (sd 0.000) across them, with nothing changed. Any effect smaller than that band is not distinguishable from nothing.
+
+## Resolution accuracy (primary)
+
+Mean per-task pass rate, with a 95% bootstrap CI over tasks.
+
+| arm | E0 | E1 | E2 |
+|---|---|---|---|
+| **control** | 0.000 [0.000, 0.000] | 0.000 [0.000, 0.000] | 0.000 [0.000, 0.000] |
+| **sham** | 0.000 [0.000, 0.000] | 0.000 [0.000, 0.000] | 0.000 [0.000, 0.000] |
+| **treatment** | 0.717 [0.517, 0.883] | 0.000 [0.000, 0.000] | 0.000 [0.000, 0.000] |
+
+## Effort per trial (completed trials only)
+
+What the answer cost, per trial — **not** per solved task. The `*_per_solved` tables further down divide by the number of passes, so they move when accuracy moves and read as an efficiency change that never happened. These are the raw per-trial means.
+
+Restricted to trials with `status == completed`. An abort truncates a run, so a trial that gave up at step 12 records less effort than one that worked honestly to step 60 — including aborts would reward whichever arm quits more. The arms differ on abort rate, and that is reported separately under *Instrument health* rather than smuggled in here.
+
+
+**model calls** — lower is better
+
+| arm | E0 | E1 | E2 |
+|---|---|---|---|
+| control | — | — | — |
+| sham | — | — | — |
+| treatment | 40.0 | — | — |
+
+**cost (USD)** — lower is better
+
+| arm | E0 | E1 | E2 |
+|---|---|---|---|
+| control | — | — | — |
+| sham | — | — | — |
+| treatment | 0.0100 | — | — |
+
+**output tokens** — lower is better
+
+| arm | E0 | E1 | E2 |
+|---|---|---|---|
+| control | — | — | — |
+| sham | — | — | — |
+| treatment | 3109 | — | — |
+
+### Trials contributing to the effort numbers
+
+`completed / total`. An effort mean resting on a handful of surviving trials is not the same measurement as one resting on all of them.
+
+| arm | E0 | E1 | E2 |
+|---|---|---|---|
+| control | 0/60 | 0/60 | 0/60 |
+| sham | 0/60 | 0/60 | 0/60 |
+| treatment | 44/60 | 0/60 | 0/60 |
+
+## Steering — stuck-loop rate (all trials)
+
+Share of trials whose run ended with the harness's own *stuck-loop* warning: the agent was told it was looping and looped anyway. These are one-shot headless trials, so nobody is there to intervene — this is the closest proxy the design has for *a human had to step in*.
+
+Scored over **all** trials, unlike effort. Looping is only observable on runs that went wrong, so filtering to completed trials would define the outcome out of existence.
+
+| arm | E0 | E1 | E2 |
+|---|---|---|---|
+| control | 0.000 | 0.000 | 0.000 |
+| sham | 0.000 | 0.000 | 0.000 |
+| treatment | 0.250 | 0.000 | 0.000 |
+
+## Paired contrasts on effort and steering
+
+Same task, same epoch, arm minus arm, bootstrapped over tasks — the identical machinery the accuracy contrast uses. Negative favours the first arm on every row: these outcomes are all costs.
+
+`rel` is the delta as a share of the second arm's mean over the same shared tasks. No threshold is applied: none was pre-registered for these axes, and choosing one now, after seeing the probe, would be choosing it knowing the answer.
+
+| epoch | comparison | outcome | delta | 95% CI | rel | n tasks | verdict |
+|---|---|---|---|---|---|---|---|
+| E0 | treatment − control | stuck-loop rate | +0.250 | [+0.100, +0.417] | — | 12 | CI excludes zero |
+| E0 | treatment − sham | stuck-loop rate | +0.250 | [+0.100, +0.417] | — | 12 | CI excludes zero |
+| E0 | sham − control | stuck-loop rate | +0.000 | [+0.000, +0.000] | — | 12 | within noise (CI spans zero) |
+| E1 | treatment − control | stuck-loop rate | +0.000 | [+0.000, +0.000] | — | 12 | within noise (CI spans zero) |
+| E1 | treatment − sham | stuck-loop rate | +0.000 | [+0.000, +0.000] | — | 12 | within noise (CI spans zero) |
+| E1 | sham − control | stuck-loop rate | +0.000 | [+0.000, +0.000] | — | 12 | within noise (CI spans zero) |
+| E2 | treatment − control | stuck-loop rate | +0.000 | [+0.000, +0.000] | — | 12 | within noise (CI spans zero) |
+| E2 | treatment − sham | stuck-loop rate | +0.000 | [+0.000, +0.000] | — | 12 | within noise (CI spans zero) |
+| E2 | sham − control | stuck-loop rate | +0.000 | [+0.000, +0.000] | — | 12 | within noise (CI spans zero) |
+
+> **18 contrasts are computed on this page** (9 on accuracy, 9 on effort and steering). At alpha = 0.05 the family-wise error rate is **~60%** — several intervals excluding zero by chance alone is the expectation, not the exception. More contrasts have already been run across findings 10–12, so the true family is larger than this page. What earns confidence is not one interval but independent measures agreeing in direction and size on the same arm, and then replicating. Read this table that way.
+
+
+## Store growth
+
+Memories carried into each epoch's evaluation. The sham arm must stay comparable to treatment or it is no control at all.
+
+| arm | E0 | E1 | E2 |
+|---|---|---|---|
+| control | 0 | 0 | 0 |
+| sham | 0 | 0 | 0 |
+| treatment | 0 | 0 | 0 |
+
+## Per-solved-task ratios (kept for continuity — read with care)
+
+These divide total effort by the number of *passes*, so they conflate effort with correctness: an arm that solves one more task looks more efficient without having changed how it works. The per-trial tables above are the ones to read for effort. Retained because series 001 and 002 were published on them.
+
+
+## Token efficiency — tokens per solved task
+
+| arm | E0 | E1 | E2 |
+|---|---|---|---|
+| control | — | — | — |
+| sham | — | — | — |
+| treatment | 727525 | — | — |
+
+## Cost — USD per solved task
+
+| arm | E0 | E1 | E2 |
+|---|---|---|---|
+| control | — | — | — |
+| sham | — | — | — |
+| treatment | 0.0125 | — | — |
+
+## Speed — seconds per solved task
+
+| arm | E0 | E1 | E2 |
+|---|---|---|---|
+| control | — | — | — |
+| sham | — | — | — |
+| treatment | 144.1 | — | — |
+
+## Speed — model calls per solved task
+
+| arm | E0 | E1 | E2 |
+|---|---|---|---|
+| control | — | — | — |
+| sham | — | — | — |
+| treatment | 52.33 | — | — |
+
+## Context efficiency — recalled tokens per model call
+
+| arm | E0 | E1 | E2 |
+|---|---|---|---|
+| control | — | — | — |
+| sham | — | — | — |
+| treatment | 1.3 | — | — |
+
+## Context efficiency — share of recalled frames cited
+
+| arm | E0 | E1 | E2 |
+|---|---|---|---|
+| control | 0.000 | 0.000 | 0.000 |
+| sham | 0.000 | 0.000 | 0.000 |
+| treatment | 0.000 | 0.000 | 0.000 |
+
+## Memorization check — worked tasks vs. held-out tasks
+
+The evaluation pool is never worked, so it can only show transfer. The experience pool *is* worked, so it can show memorization. Improvement that appears on worked tasks and not on held-out ones is memorization, correctly named — and a context system is supposed to memorize, so seeing it here is expected rather than damning. The divergence between the two columns is the measurement.
+
+| arm | epoch | worked-task pass rate | held-out pass rate | divergence |
+|---|---|---|---|---|
+| control | E0 | — (n=0) | 0.000 (n=60) | — |
+| control | E1 | — (n=0) | 0.000 (n=60) | — |
+| control | E2 | — (n=0) | 0.000 (n=60) | — |
+| sham | E0 | — (n=0) | 0.000 (n=60) | — |
+| sham | E1 | — (n=0) | 0.000 (n=60) | — |
+| sham | E2 | — (n=0) | 0.000 (n=60) | — |
+| treatment | E0 | 0.000 (n=5) | 0.717 (n=60) | -0.717 |
+| treatment | E1 | 0.000 (n=5) | 0.000 (n=60) | +0.000 |
+| treatment | E2 | — (n=0) | 0.000 (n=60) | — |
+
+## Instrument health
+
+Degenerate trials — ones that produced no work at all — are reported separately, because they fail identically to an agent that tried and got it wrong. A null result caused by aborted runs is not a null result about the lifecycle.
+
+| arm | epoch | trials | zero-work | non-completed status | mean calls |
+|---|---|---|---|---|---|
+| control | E0 | 60 | 60 | 60 | 0.0 |
+| control | E1 | 60 | 60 | 60 | 0.0 |
+| control | E2 | 60 | 60 | 60 | 0.0 |
+| sham | E0 | 60 | 60 | 60 | 0.0 |
+| sham | E1 | 60 | 60 | 60 | 0.0 |
+| sham | E2 | 60 | 60 | 60 | 0.0 |
+| treatment | E0 | 60 | 0 | 16 | 37.5 |
+| treatment | E1 | 60 | 60 | 60 | 0.0 |
+| treatment | E2 | 60 | 60 | 60 | 0.0 |
+
+## Regression rate
+
+Tasks solved at epoch *N* that fail at *N+1*. A system can learn net-positive while silently breaking what it used to get right.
+
+| arm | transition | solved before | regressed | rate | tasks |
+|---|---|---|---|---|---|
+| control | E0→E1 | 0 | 0 | — | — |
+| control | E1→E2 | 0 | 0 | — | — |
+| sham | E0→E1 | 0 | 0 | — | — |
+| sham | E1→E2 | 0 | 0 | — | — |
+| treatment | E0→E1 | 8 | 8 | 1.000 | eval-01-refund, eval-04-split, eval-05-statement, eval-06-merge, eval-07-tax, eval-09-reconcile, eval-10-cap, eval-12-largest |
+| treatment | E1→E2 | 0 | 0 | — | — |
+
+## Paired comparisons — accuracy (primary)
+
+Same task, same epoch, arm minus arm. Pairing on task has far more power than comparing pool means.
+
+| epoch | comparison | delta | 95% CI | verdict |
+|---|---|---|---|---|
+| E0 | treatment − control | +0.717 | [+0.517, +0.883] | difference exceeds the pre-registered threshold |
+| E0 | treatment − sham | +0.717 | [+0.517, +0.883] | difference exceeds the pre-registered threshold |
+| E0 | sham − control | +0.000 | [+0.000, +0.000] | no detectable difference (CI spans zero) |
+| E1 | treatment − control | +0.000 | [+0.000, +0.000] | no detectable difference (CI spans zero) |
+| E1 | treatment − sham | +0.000 | [+0.000, +0.000] | no detectable difference (CI spans zero) |
+| E1 | sham − control | +0.000 | [+0.000, +0.000] | no detectable difference (CI spans zero) |
+| E2 | treatment − control | +0.000 | [+0.000, +0.000] | no detectable difference (CI spans zero) |
+| E2 | treatment − sham | +0.000 | [+0.000, +0.000] | no detectable difference (CI spans zero) |
+| E2 | sham − control | +0.000 | [+0.000, +0.000] | no detectable difference (CI spans zero) |
+
+## Trend across the series
+
+| arm | first | last | delta |
+|---|---|---|---|
+| control | 0.000 | 0.000 | +0.000 |
+| sham | 0.000 | 0.000 | +0.000 |
+| treatment | 0.717 | 0.000 | -0.717 |
+
+## Per-task detail
+
+Pass rate over k trials. Published in full, losses included.
+
+| task | control E0 | sham E0 | treatment E0 | control E1 | sham E1 | treatment E1 | control E2 | sham E2 | treatment E2 |
+|---|---|---|---|---|---|---|---|---|---|
+| `eval-01-refund` | 0.00 | 0.00 | 1.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| `eval-02-sweep` | 0.00 | 0.00 | 0.40 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| `eval-03-interest` | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| `eval-04-split` | 0.00 | 0.00 | 1.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| `eval-05-statement` | 0.00 | 0.00 | 1.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| `eval-06-merge` | 0.00 | 0.00 | 0.80 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| `eval-07-tax` | 0.00 | 0.00 | 0.80 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| `eval-08-installments` | 0.00 | 0.00 | 0.40 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| `eval-09-reconcile` | 0.00 | 0.00 | 1.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| `eval-10-cap` | 0.00 | 0.00 | 1.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| `eval-11-share` | 0.00 | 0.00 | 0.40 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| `eval-12-largest` | 0.00 | 0.00 | 0.80 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+

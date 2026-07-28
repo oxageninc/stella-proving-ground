@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from verifier_lib import (
+    CheckReport,
     assert_ledger_error,
     assert_minor_units,
     assert_registered,
@@ -13,21 +14,44 @@ from verifier_lib import (
     VerifyFailure,
 )
 
+ACCOUNTS = {"alice": 10015, "bob": 2537}
+JOURNAL = []
 
-def verify(ws: Path) -> None:
 
-    assert_registered(ws, 'rename')
-    assert_minor_units(ws)
-    assert_validates(ws, 'rename')
+def _seed(ws: Path) -> None:
+    """Known state before every stateful check — never the agent's leftovers."""
+    write_ledger(ws, ACCOUNTS, JOURNAL)
 
-    write_ledger(ws, {"alice": 10000, "bob": 2500})
-    rc, out, err = run_cli(ws, "rename", "--from", "bob", "--to", "robert")
-    if rc != 0:
-        raise VerifyFailure(f"rename failed: rc={rc} err={err!r}")
-    if out != "renamed bob to robert":
-        raise VerifyFailure(f"unexpected output: {out!r}")
-    accounts = load_ledger(ws)["accounts"]
-    if accounts.get("robert") != 2500 or "bob" in accounts:
-        raise VerifyFailure(f"rename did not move the balance: {accounts!r}")
-    assert_minor_units(ws)
-    assert_ledger_error(ws, "rename", "--from", "nobody", "--to", "x")
+
+def verify(ws: Path) -> CheckReport:
+    report = CheckReport(ws)
+
+    def behaviour():
+        _seed(ws)
+        rc, out, err = run_cli(ws, 'rename', '--from', 'bob', '--to', 'robert')
+        if rc != 0:
+            raise VerifyFailure(f"rc={rc} err={err!r}")
+        if out != 'renamed bob to robert':
+            raise VerifyFailure(f"unexpected output: {out!r}")
+        data = load_ledger(ws)
+        if data["accounts"].get('robert') != 2537:
+            raise VerifyFailure(f"robert should be 2537, got {data['accounts'].get('robert')!r}")
+        if 'bob' in data["accounts"]:
+            raise VerifyFailure("bob should be gone")
+
+    report.check("registered", lambda: assert_registered(ws, 'rename'))
+    report.check("behaviour", behaviour)
+    report.check("minor_units", lambda: assert_minor_units(ws))
+
+    def error_path():
+        _seed(ws)
+        assert_ledger_error(ws, 'rename', '--from', 'nobody', '--to', 'x')
+
+    report.check("ledger_error", error_path)
+
+    def validated():
+        _seed(ws)
+        assert_validates(ws, 'rename')
+
+    report.check("validated", validated)
+    return report

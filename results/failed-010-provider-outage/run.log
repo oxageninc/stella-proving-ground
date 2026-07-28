@@ -1,0 +1,144 @@
+==> using stella checkout: /Users/macanderson/Projects/stella
+==> pulling (fast-forward only)
+From github.com:macanderson/stella
+ + 2cb797f4...b2ca9732 claude/stella-backlog-issues-0a9p10 -> origin/claude/stella-backlog-issues-0a9p10  (forced update)
+Updating d8aee7d0..97f59d36
+Fast-forward
+ CHANGELOG.md                 |  2 ++
+ Cargo.lock                   | 30 +++++++++++++++---------------
+ Cargo.toml                   |  2 +-
+ packaging/homebrew/stella.rb |  4 ++--
+ 4 files changed, 20 insertions(+), 18 deletions(-)
+==> building release binary at 97f59d365453078b7d79cff0d09e06fede568bb9
+[1m[92m   Compiling[0m stella-protocol v0.5.71 (/Users/macanderson/Projects/stella/stella-protocol)
+[1m[92m   Compiling[0m stella-cli v0.5.71 (/Users/macanderson/Projects/stella/stella-cli)
+[1m[92m   Compiling[0m stella-observatory v0.5.71 (/Users/macanderson/Projects/stella/stella-observatory)
+[1m[92m   Compiling[0m stella-context v0.5.71 (/Users/macanderson/Projects/stella/stella-context)
+[1m[92m   Compiling[0m stella-store v0.5.71 (/Users/macanderson/Projects/stella/stella-store)
+[1m[92m   Compiling[0m stella-core v0.5.71 (/Users/macanderson/Projects/stella/stella-core)
+[1m[92m   Compiling[0m stella-model v0.5.71 (/Users/macanderson/Projects/stella/stella-model)
+[1m[92m   Compiling[0m stella-media v0.5.71 (/Users/macanderson/Projects/stella/stella-media)
+[1m[92m   Compiling[0m stella-graph v0.5.71 (/Users/macanderson/Projects/stella/stella-graph)
+[1m[92m   Compiling[0m stella-pipeline v0.5.71 (/Users/macanderson/Projects/stella/stella-pipeline)
+[1m[92m   Compiling[0m stella-mcp v0.5.71 (/Users/macanderson/Projects/stella/stella-mcp)
+[1m[92m   Compiling[0m stella-tools v0.5.71 (/Users/macanderson/Projects/stella/stella-tools)
+[1m[92m   Compiling[0m stella-fleet v0.5.71 (/Users/macanderson/Projects/stella/stella-fleet)
+[1m[92m   Compiling[0m stella-tui v0.5.71 (/Users/macanderson/Projects/stella/stella-tui)
+[1m[92m    Finished[0m `release` profile [optimized] target(s) in 1m 51s
+==> built stella 0.5.71 from 97f59d365453078b7d79cff0d09e06fede568bb9
+==> ok: fresh binary from the tip of main
+==> instrument check (free, no model calls)
+.venv/bin/python -m pytest tests/ -q
+[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m [ 72%]
+[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m.[0m[32m                                             [100%][0m
+[32m[32m[1m100 passed[0m[32m in 4.82s[0m[0m
+==> ok: verifiers fail on an untouched corpus and pass on a reference
+    solution, the leak gate fires and stays quiet correctly, and the
+    corpus is pristine. Numbers from this harness mean something.
+
+==> series series-010: 5 epochs, k=3, arms=treatment,control,sham
+    22 tasks x 3 arms — roughly $25.74 and 181 min at concurrency 10
+    stopping if credit falls below $2.00
+
+{
+  "model": "z-ai/glm-4.7-flash",
+  "reflection_model": "google/gemini-2.5-flash-lite",
+  "provider": "openrouter",
+  "reasoning": "off",
+  "budget_usd": 0.25,
+  "headless_scope_bypass": true,
+  "pump_proposals": true,
+  "stella_binary": "/Users/macanderson/Projects/stella/target/release/stella",
+  "stella_commit": "97f59d365453078b7d79cff0d09e06fede568bb9",
+  "stella_version": "stella 0.5.71",
+  "binary_sha256": "9fc6f9eeaf9e6710de65149a286dfaaa03d308143d34804b06b7ebc431a5d039",
+  "harness_commit": "6bb44b70257b2daadf4f99a05bdf12e0e2494a4f",
+  "task_pool_digest": "a01e7a2175573161",
+  "lifecycle_enabled": true
+}
+
+=== epoch 0 ===
+  treatment: store 0 memories / 0 episodes / 0 records — leak scan clean — 0 stored values scanned against 477 evaluation-only n-grams
+    eval treatment E0 eval-01-refund#2: PASS $0.0068
+    eval treatment E0 eval-02-sweep#1: PASS $0.0062
+    eval treatment E0 eval-02-sweep#0: PASS $0.0069
+    eval treatment E0 eval-02-sweep#2: PASS $0.0164
+    eval treatment E0 eval-01-refund#0: PASS $0.0106
+    eval treatment E0 eval-03-interest#0: fail $0.0096
+    eval treatment E0 eval-04-split#1: PASS $0.0066
+    eval treatment E0 eval-05-statement#0: PASS $0.0060
+    eval treatment E0 eval-01-refund#1: PASS $0.0133
+    eval treatment E0 eval-05-statement#2: fail $0.0044
+    eval treatment E0 eval-03-interest#1: fail $0.0213
+    eval treatment E0 eval-05-statement#1: PASS $0.0066
+    eval treatment E0 eval-04-split#0: PASS $0.0148
+    eval treatment E0 eval-03-interest#2: PASS $0.0150
+    eval treatment E0 eval-06-merge#1: PASS $0.0090
+    eval treatment E0 eval-06-merge#2: PASS $0.0102
+    eval treatment E0 eval-04-split#2: PASS $0.0103
+    eval treatment E0 eval-09-reconcile#0: PASS $0.0049
+    eval treatment E0 eval-08-installments#1: fail $0.0120
+    eval treatment E0 eval-08-installments#2: PASS $0.0350
+    eval treatment E0 eval-06-merge#0: PASS $0.0252
+    eval treatment E0 eval-10-cap#0: PASS $0.0048
+    eval treatment E0 eval-08-installments#0: fail $0.0089
+    eval treatment E0 eval-09-reconcile#2: PASS $0.0151
+    eval treatment E0 eval-09-reconcile#1: PASS $0.0132
+    eval treatment E0 eval-10-cap#2: PASS $0.0283
+    eval treatment E0 eval-11-share#0: fail $0.0068
+    eval treatment E0 eval-07-tax#1: PASS $0.0284
+    eval treatment E0 eval-12-largest#0: PASS $0.0046
+    eval treatment E0 eval-11-share#1: PASS $0.0054
+    eval treatment E0 eval-12-largest#2: PASS $0.0076
+    eval treatment E0 eval-10-cap#1: PASS $0.0114
+    eval treatment E0 eval-12-largest#1: PASS $0.0079
+    eval treatment E0 eval-11-share#2: fail $0.0147
+    eval treatment E0 eval-07-tax#0: fail $0.0497
+    eval treatment E0 eval-07-tax#2: PASS $0.1688
+  treatment E0: 28/36 solved
+  control: store 0 memories / 0 episodes / 0 records
+    eval control E0 eval-04-split#0: PASS $0.0099
+    eval control E0 eval-02-sweep#2: PASS $0.0206
+    eval control E0 eval-02-sweep#0: PASS $0.0308
+    eval control E0 eval-01-refund#0: PASS $0.0109
+    eval control E0 eval-01-refund#1: PASS $0.0174
+    eval control E0 eval-04-split#2: PASS $0.0120
+    eval control E0 eval-05-statement#1: PASS $0.0046
+    eval control E0 eval-03-interest#0: fail $0.0398
+    eval control E0 eval-05-statement#2: PASS $0.0042
+    eval control E0 eval-04-split#1: PASS $0.0090
+    eval control E0 eval-03-interest#2: PASS $0.0426
+    eval control E0 eval-01-refund#2: PASS $0.0127
+    eval control E0 eval-05-statement#0: PASS $0.0092
+    eval control E0 eval-06-merge#0: fail $0.0019
+    eval control E0 eval-06-merge#1: fail $0.0015
+    eval control E0 eval-02-sweep#1: PASS $0.0155
+    eval control E0 eval-03-interest#1: PASS $0.0116
+    eval control E0 eval-06-merge#2: fail $0.0000
+    eval control E0 eval-07-tax#0: fail $0.0000
+    eval control E0 eval-07-tax#1: fail $0.0000
+    eval control E0 eval-08-installments#1: fail $0.0000
+    eval control E0 eval-09-reconcile#1: fail $0.0000
+    eval control E0 eval-09-reconcile#0: fail $0.0000
+    eval control E0 eval-07-tax#2: fail $0.0000
+    eval control E0 eval-08-installments#2: fail $0.0000
+    eval control E0 eval-09-reconcile#2: fail $0.0000
+    eval control E0 eval-08-installments#0: fail $0.0000
+    eval control E0 eval-10-cap#0: fail $0.0000
+    eval control E0 eval-10-cap#1: fail $0.0000
+    eval control E0 eval-12-largest#0: fail $0.0000
+    eval control E0 eval-10-cap#2: fail $0.0000
+    eval control E0 eval-12-largest#1: fail $0.0000
+    eval control E0 eval-12-largest#2: fail $0.0000
+    eval control E0 eval-11-share#0: fail $0.0000
+    eval control E0 eval-11-share#1: fail $0.0000
+    eval control E0 eval-11-share#2: fail $0.0000
+  control E0: 14/36 solved
+  sham: store 0 memories / 0 episodes / 0 records — leak scan clean — 0 stored values scanned against 477 evaluation-only n-grams
+
+==> PROVIDER DOWN — last 12 trials aborted with a transport error
+    and zero model calls. Stopping: every further trial would be
+    recorded as a failure indistinguishable from a result.
+scripts/series.sh: line 53: 87677 Terminated: 15          "$PY" -u -m proving_ground.cli run --root "$ROOT" --epochs "$EPOCHS" -k "$TRIALS" --block-size "$BLOCK_SIZE" --concurrency "$CONCURRENCY" --arms "$ARMS" 2>&1
+     87678 Done                    | tee "$ROOT/run.log"
+make: *** [series] Error 143

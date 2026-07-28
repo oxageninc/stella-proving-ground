@@ -3,7 +3,7 @@
 
 Every task is the same shape — add one command to `ledgerctl` — so that the
 only thing separating the experience pool from the evaluation pool is *which*
-command, never task difficulty or task form. That matters: if eval tasks were
+command, never task difficulty or task form. If evaluation tasks were
 systematically harder, an accuracy gap between arms could be a difficulty
 artifact rather than a transfer effect.
 
@@ -11,6 +11,19 @@ Each task emits:
   <pool>/<id>/prompt.md   — what the agent is told, verbatim
   <pool>/<id>/setup.json  — starting ledger state
   <pool>/<id>/verify.py   — deterministic verifier, never in the workspace
+
+## Two things every generated verifier now does, learned the hard way
+
+**It seeds before it asserts.** Asserting against whatever the agent left
+behind conflated "violated a convention" with "deleted the file": two `sweep`
+trials removed `ledger.json` and were reported as `ledger file missing`, which
+named no convention and tested none.
+
+**It scores each check separately.** A whole-task bit over six tasks gave the
+bootstrap n=6 and a confidence interval wider than the effect it was measuring.
+The same trials scored per check yield several times the observations at
+identical model cost — and convention compliance is what context is supposed to
+teach, so it measures the mechanism rather than a noisy proxy for it.
 """
 
 import json
@@ -26,11 +39,12 @@ Read the repository first — it has house conventions that the test suite
 enforces. Do not add dependencies. Do not modify the test suite.
 """
 
-VERIFY_HEAD = '''"""Deterministic verifier for {id}. Mounted read-only at scoring time."""
+HEAD = '''"""Deterministic verifier for {id}. Mounted read-only at scoring time."""
 
 from pathlib import Path
 
 from verifier_lib import (
+    CheckReport,
     assert_ledger_error,
     assert_minor_units,
     assert_registered,
@@ -41,30 +55,168 @@ from verifier_lib import (
     VerifyFailure,
 )
 
+ACCOUNTS = {accounts}
+JOURNAL = {journal}
 
-def verify(ws: Path) -> None:
+
+def _seed(ws: Path) -> None:
+    """Known state before every stateful check — never the agent's leftovers."""
+    write_ledger(ws, ACCOUNTS, JOURNAL)
+
+
+def verify(ws: Path) -> CheckReport:
+    report = CheckReport(ws)
+
+    def behaviour():
+        _seed(ws)
+{behaviour}
+
+    report.check("registered", lambda: assert_registered(ws, {cmd!r}))
+    report.check("behaviour", behaviour)
+    report.check("minor_units", lambda: assert_minor_units(ws))
+{extra}
+    return report
 '''
 
 
-def task(pool, tid, name, spec, setup, body):
+def emit(pool, tid, name, spec, accounts, journal, behaviour, error_argv=None, validate_args=None):
     d = HERE / pool / tid
     d.mkdir(parents=True, exist_ok=True)
     (d / "prompt.md").write_text(PROMPT.format(name=name, spec=spec.strip()))
-    (d / "setup.json").write_text(json.dumps(setup, indent=2) + "\n")
-    (d / "verify.py").write_text(VERIFY_HEAD.format(id=tid) + body.rstrip() + "\n")
+    (d / "setup.json").write_text(
+        json.dumps({"accounts": accounts, "journal": journal}, indent=2) + "\n"
+    )
+    extra = []
+    if error_argv is not None:
+        args = ", ".join(repr(a) for a in error_argv)
+        extra.append(
+            f"""
+    def error_path():
+        _seed(ws)
+        assert_ledger_error(ws, {args})
+
+    report.check("ledger_error", error_path)"""
+        )
+    if validate_args is not None:
+        args = "".join(f", {a!r}" for a in validate_args)
+        extra.append(
+            f"""
+    def validated():
+        _seed(ws)
+        assert_validates(ws, {name!r}{args})
+
+    report.check("validated", validated)"""
+        )
+    (d / "verify.py").write_text(
+        HEAD.format(
+            id=tid,
+            accounts=json.dumps(accounts),
+            journal=json.dumps(journal),
+            cmd=name,
+            behaviour="\n".join("        " + ln for ln in behaviour.strip().splitlines()),
+            extra="\n".join(extra),
+        )
+    )
 
 
-BASE = {"accounts": {"alice": 10000, "bob": 2500}, "journal": []}
+def fmt(minor: int) -> str:
+    """1250 -> '12.50'. Mirrors `money.format_amount` so expected strings in the
+    verifiers are computed, never typed. Every expected balance below is derived
+    by the same integer arithmetic the corpus uses, which is what stops a task
+    from shipping with an arithmetic error in its own answer key."""
+    return f"{minor // 100}.{minor % 100:02d}"
 
 
-def std(cmd, *present):
-    """The four house conventions, checked identically for every task."""
-    args = ", ".join(repr(p) for p in present)
-    return f"""
-    assert_registered(ws, {cmd!r})
-    assert_minor_units(ws)
-    assert_validates(ws, {cmd!r}{", " + args if args else ""})
-"""
+#: Starting balances carry odd cents on purpose.
+#:
+#: With round numbers (100.00 / 25.00) every percentage came out exact, so the
+#: "discard fractions of a cent" rule never decided anything and a float
+#: implementation scored identically to a correct one. 100.15 and 25.37 make the
+#: remainder real: 5% of 10015 is 500.75, and only an implementation that floors
+#: in minor units lands on 500.
+BASE = {"alice": 10015, "bob": 2537}
+
+#: Amounts whose naive parse is WRONG.
+#:
+#: `int(float("1.15") * 100)` is 114, not 115 — binary floating point cannot
+#: represent 1.15, and truncation takes the error downward. The house helper
+#: `money.parse_amount` splits the string instead and returns 115.
+#:
+#: This is the whole point of the redesign. Before, the minor-units convention
+#: was decoration: the agent already stored integers, so the check passed
+#: whether or not it understood why. Now the convention decides the *answer* —
+#: follow it and the balance is right, hand-roll the parse and it is off by a
+#: cent, on every single one of these amounts.
+TRAP_115 = "1.15"   # -> 115, naive 114
+TRAP_201 = "2.01"   # -> 201, naive 200
+TRAP_029 = "0.29"   # ->  29, naive  28
+TRAP_230 = "2.30"   # -> 230, naive 229
+
+
+def line(cmd_args, expect_out, checks=""):
+    """The common behaviour body: run once, assert the output, assert state."""
+    args = ", ".join(repr(a) for a in cmd_args)
+    body = f"""rc, out, err = run_cli(ws, {args})
+if rc != 0:
+    raise VerifyFailure(f"rc={{rc}} err={{err!r}}")
+if out != {expect_out!r}:
+    raise VerifyFailure(f"unexpected output: {{out!r}}")
+data = load_ledger(ws)"""
+    return body + ("\n" + checks.strip() if checks.strip() else "")
+
+
+def seq(steps, checks=""):
+    """Several invocations in a row, then assert the accumulated state.
+
+    A single invocation cannot tell a correct implementation from one that
+    happens to be right once. Running twice catches the implementations that
+    re-read stale state, write the whole ledger back from a snapshot taken at
+    startup, or compound a rounding error — none of which a one-shot check sees.
+
+    With compounding percentages it is stronger still: the second call's
+    expected output depends on the first call having been exactly right, so one
+    cent of drift anywhere fails visibly rather than averaging out.
+    """
+    out = []
+    for cmd_args, expect_out in steps:
+        args = ", ".join(repr(a) for a in cmd_args)
+        out.append(f"""rc, out, err = run_cli(ws, {args})
+if rc != 0:
+    raise VerifyFailure(f"rc={{rc}} err={{err!r}}")
+if out != {expect_out!r}:
+    raise VerifyFailure(f"unexpected output: {{out!r}}")""")
+    out.append("data = load_ledger(ws)")
+    body = "\n".join(out)
+    return body + ("\n" + checks.strip() if checks.strip() else "")
+
+
+def journal_has(kind):
+    return (
+        f'if not any(e.get("type") == {kind!r} for e in data["journal"]):\n'
+        f'    raise VerifyFailure("no journal entry with type {kind}")'
+    )
+
+
+def journal_count(kind, n):
+    return (
+        f'seen = [e for e in data["journal"] if e.get("type") == {kind!r}]\n'
+        f'if len(seen) != {n}:\n'
+        f'    raise VerifyFailure(f"expected {n} {kind} journal entries, got {{len(seen)}}")'
+    )
+
+
+def bal(acct, want):
+    return (
+        f'if data["accounts"].get({acct!r}) != {want}:\n'
+        f'    raise VerifyFailure(f"{acct} should be {want}, got {{data[\'accounts\'].get({acct!r})!r}}")'
+    )
+
+
+def gone(acct):
+    return (
+        f'if {acct!r} in data["accounts"]:\n'
+        f'    raise VerifyFailure("{acct} should be gone")'
+    )
 
 
 # --------------------------------------------------------------------------
@@ -72,432 +224,154 @@ def std(cmd, *present):
 # --------------------------------------------------------------------------
 
 EXPERIENCE = [
-    (
-        "exp-01-withdraw",
-        "withdraw",
-        """
-`ledgerctl withdraw --account alice --amount 5.00` debits the account and
-prints exactly `withdrew 5.00 from alice`. Record a journal entry with
-`"type": "withdraw"`. Withdrawing more than the balance must fail cleanly.
-""",
-        BASE,
-        std("withdraw")
-        + """
-    write_ledger(ws, {"alice": 10000, "bob": 2500})
-    rc, out, err = run_cli(ws, "withdraw", "--account", "alice", "--amount", "5.00")
-    if rc != 0:
-        raise VerifyFailure(f"withdraw failed: rc={rc} err={err!r}")
-    if out != "withdrew 5.00 from alice":
-        raise VerifyFailure(f"unexpected output: {out!r}")
-    data = load_ledger(ws)
-    if data["accounts"]["alice"] != 9500:
-        raise VerifyFailure(f"alice should be 9500, got {data['accounts']['alice']!r}")
-    if not any(e.get("type") == "withdraw" for e in data["journal"]):
-        raise VerifyFailure("no journal entry with type 'withdraw'")
-    assert_minor_units(ws)
-    assert_ledger_error(ws, "withdraw", "--account", "bob", "--amount", "999.00")
-""",
-    ),
-    (
-        "exp-02-open",
-        "open",
-        """
-`ledgerctl open --account carol` creates a new account with a zero balance and
-prints exactly `opened carol`. Opening an account that already exists must
-fail cleanly.
-""",
-        BASE,
-        std("open")
-        + """
-    write_ledger(ws, {"alice": 10000, "bob": 2500})
-    rc, out, err = run_cli(ws, "open", "--account", "carol")
-    if rc != 0:
-        raise VerifyFailure(f"open failed: rc={rc} err={err!r}")
-    if out != "opened carol":
-        raise VerifyFailure(f"unexpected output: {out!r}")
-    if load_ledger(ws)["accounts"].get("carol") != 0:
-        raise VerifyFailure("carol should exist with balance 0")
-    assert_minor_units(ws)
-    assert_ledger_error(ws, "open", "--account", "alice")
-""",
-    ),
-    (
-        "exp-03-close",
-        "close",
-        """
-`ledgerctl close --account bob` removes an account and prints exactly
-`closed bob`. Closing an account with a non-zero balance must fail cleanly.
-""",
-        BASE,
-        std("close")
-        + """
-    write_ledger(ws, {"alice": 10000, "bob": 0})
-    rc, out, err = run_cli(ws, "close", "--account", "bob")
-    if rc != 0:
-        raise VerifyFailure(f"close failed: rc={rc} err={err!r}")
-    if out != "closed bob":
-        raise VerifyFailure(f"unexpected output: {out!r}")
-    if "bob" in load_ledger(ws)["accounts"]:
-        raise VerifyFailure("bob should be gone from accounts")
-    assert_minor_units(ws)
-    assert_ledger_error(ws, "close", "--account", "alice")
-""",
-    ),
-    (
-        "exp-04-list",
-        "list",
-        """
-`ledgerctl list` prints every account name and formatted balance on one line,
-sorted by name, joined by `, ` — for the starting ledger exactly
-`alice 100.00, bob 25.00`.
-""",
-        BASE,
-        """
-    assert_registered(ws, 'list')
-    assert_minor_units(ws)
-    write_ledger(ws, {"alice": 10000, "bob": 2500})
-    rc, out, err = run_cli(ws, "list")
-    if rc != 0:
-        raise VerifyFailure(f"list failed: rc={rc} err={err!r}")
-    if out != "alice 100.00, bob 25.00":
-        raise VerifyFailure(f"unexpected output: {out!r}")
-""",
-    ),
-    (
-        "exp-05-total",
-        "total",
-        """
-`ledgerctl total` prints the sum of every balance as exactly `total 125.00`
-for the starting ledger.
-""",
-        BASE,
-        """
-    assert_registered(ws, 'total')
-    assert_minor_units(ws)
-    write_ledger(ws, {"alice": 10000, "bob": 2500})
-    rc, out, err = run_cli(ws, "total")
-    if rc != 0:
-        raise VerifyFailure(f"total failed: rc={rc} err={err!r}")
-    if out != "total 125.00":
-        raise VerifyFailure(f"unexpected output: {out!r}")
-""",
-    ),
-    (
-        "exp-06-fee",
-        "fee",
-        """
-`ledgerctl fee --account alice --amount 1.50` debits a service fee and prints
-exactly `charged 1.50 fee to alice`. Record a journal entry with
-`"type": "fee"`. A fee larger than the balance must fail cleanly.
-""",
-        BASE,
-        std("fee")
-        + """
-    write_ledger(ws, {"alice": 10000, "bob": 2500})
-    rc, out, err = run_cli(ws, "fee", "--account", "alice", "--amount", "1.50")
-    if rc != 0:
-        raise VerifyFailure(f"fee failed: rc={rc} err={err!r}")
-    if out != "charged 1.50 fee to alice":
-        raise VerifyFailure(f"unexpected output: {out!r}")
-    data = load_ledger(ws)
-    if data["accounts"]["alice"] != 9850:
-        raise VerifyFailure(f"alice should be 9850, got {data['accounts']['alice']!r}")
-    if not any(e.get("type") == "fee" for e in data["journal"]):
-        raise VerifyFailure("no journal entry with type 'fee'")
-    assert_minor_units(ws)
-    assert_ledger_error(ws, "fee", "--account", "bob", "--amount", "999.00")
-""",
-    ),
-    (
-        "exp-07-rename",
-        "rename",
-        """
-`ledgerctl rename --from bob --to robert` renames an account, preserving its
-balance, and prints exactly `renamed bob to robert`. Renaming a missing
-account, or onto a name that already exists, must fail cleanly.
-""",
-        BASE,
-        std("rename")
-        + """
-    write_ledger(ws, {"alice": 10000, "bob": 2500})
-    rc, out, err = run_cli(ws, "rename", "--from", "bob", "--to", "robert")
-    if rc != 0:
-        raise VerifyFailure(f"rename failed: rc={rc} err={err!r}")
-    if out != "renamed bob to robert":
-        raise VerifyFailure(f"unexpected output: {out!r}")
-    accounts = load_ledger(ws)["accounts"]
-    if accounts.get("robert") != 2500 or "bob" in accounts:
-        raise VerifyFailure(f"rename did not move the balance: {accounts!r}")
-    assert_minor_units(ws)
-    assert_ledger_error(ws, "rename", "--from", "nobody", "--to", "x")
-""",
-    ),
-    (
-        "exp-08-count",
-        "count",
-        """
-`ledgerctl count` prints the number of accounts as exactly `accounts 2` for
-the starting ledger.
-""",
-        BASE,
-        """
-    assert_registered(ws, 'count')
-    assert_minor_units(ws)
-    write_ledger(ws, {"alice": 10000, "bob": 2500})
-    rc, out, err = run_cli(ws, "count")
-    if rc != 0:
-        raise VerifyFailure(f"count failed: rc={rc} err={err!r}")
-    if out != "accounts 2":
-        raise VerifyFailure(f"unexpected output: {out!r}")
-""",
-    ),
-    (
-        "exp-09-zero",
-        "zero",
-        """
-`ledgerctl zero --account alice` sets an account balance to zero and prints
-exactly `zeroed alice`. Record a journal entry with `"type": "zero"` whose
-`amount` is the balance that was removed. A missing account must fail cleanly.
-""",
-        BASE,
-        std("zero")
-        + """
-    write_ledger(ws, {"alice": 10000, "bob": 2500})
-    rc, out, err = run_cli(ws, "zero", "--account", "alice")
-    if rc != 0:
-        raise VerifyFailure(f"zero failed: rc={rc} err={err!r}")
-    if out != "zeroed alice":
-        raise VerifyFailure(f"unexpected output: {out!r}")
-    data = load_ledger(ws)
-    if data["accounts"]["alice"] != 0:
-        raise VerifyFailure(f"alice should be 0, got {data['accounts']['alice']!r}")
-    entries = [e for e in data["journal"] if e.get("type") == "zero"]
-    if not entries:
-        raise VerifyFailure("no journal entry with type 'zero'")
-    if entries[-1].get("amount") != 10000:
-        raise VerifyFailure(f"zero entry amount should be 10000, got {entries[-1].get('amount')!r}")
-    assert_minor_units(ws)
-    assert_ledger_error(ws, "zero", "--account", "nobody")
-""",
-    ),
-    (
-        "exp-10-topup",
-        "topup",
-        """
-`ledgerctl topup --account bob --amount 7.25` credits an account and prints
-exactly `topped up bob by 7.25`. Record a journal entry with
-`"type": "topup"`. A missing account must fail cleanly.
-""",
-        BASE,
-        std("topup")
-        + """
-    write_ledger(ws, {"alice": 10000, "bob": 2500})
-    rc, out, err = run_cli(ws, "topup", "--account", "bob", "--amount", "7.25")
-    if rc != 0:
-        raise VerifyFailure(f"topup failed: rc={rc} err={err!r}")
-    if out != "topped up bob by 7.25":
-        raise VerifyFailure(f"unexpected output: {out!r}")
-    data = load_ledger(ws)
-    if data["accounts"]["bob"] != 3225:
-        raise VerifyFailure(f"bob should be 3225, got {data['accounts']['bob']!r}")
-    if not any(e.get("type") == "topup" for e in data["journal"]):
-        raise VerifyFailure("no journal entry with type 'topup'")
-    assert_minor_units(ws)
-    assert_ledger_error(ws, "topup", "--account", "nobody", "--amount", "1.00")
-""",
-    ),
+    ("exp-01-withdraw", "withdraw",
+     f"`ledgerctl withdraw --account alice --amount {TRAP_115}` debits the account and prints exactly\n`withdrew {TRAP_115} from alice`. Record a journal entry with `\"type\": \"withdraw\"`.\nWithdrawing more than the balance must fail cleanly.",
+     BASE, [],
+     seq([(["withdraw", "--account", "alice", "--amount", TRAP_115], f"withdrew {TRAP_115} from alice")] * 2,
+         bal("alice", 10015 - 115 - 115) + "\n" + journal_count("withdraw", 2)),
+     ["withdraw", "--account", "bob", "--amount", "999.00"], []),
+    ("exp-02-open", "open",
+     "`ledgerctl open --account carol` creates a new account with a zero balance and prints exactly\n`opened carol`. Opening an account that already exists must fail cleanly.",
+     BASE, [], line(["open", "--account", "carol"], "opened carol", bal("carol", 0)),
+     ["open", "--account", "alice"], []),
+    ("exp-03-close", "close",
+     "`ledgerctl close --account bob` removes an account and prints exactly `closed bob`.\nClosing an account with a non-zero balance must fail cleanly.",
+     {"alice": 10015, "bob": 0}, [], line(["close", "--account", "bob"], "closed bob", gone("bob")),
+     ["close", "--account", "alice"], []),
+    ("exp-04-list", "list",
+     "`ledgerctl list` prints every account name and formatted balance on one line, sorted by\nname, joined by `, ` — a ledger of two accounts holding 3.50 and 1.25 prints exactly\n`alice 3.50, bob 1.25`.",
+     BASE, [], line(["list"], f"alice {fmt(10015)}, bob {fmt(2537)}"), None, None),
+    ("exp-05-total", "total",
+     "`ledgerctl total` prints the sum of every balance as `total <amount>` — a ledger holding\n3.50 in all prints exactly `total 3.50`.",
+     BASE, [], line(["total"], f"total {fmt(12552)}"), None, None),
+    ("exp-06-fee", "fee",
+     f"`ledgerctl fee --account alice --amount {TRAP_201}` debits a service fee and prints exactly\n`charged {TRAP_201} fee to alice`. Record a journal entry with `\"type\": \"fee\"`.\nA fee larger than the balance must fail cleanly.",
+     BASE, [],
+     seq([(["fee", "--account", "alice", "--amount", TRAP_201], f"charged {TRAP_201} fee to alice")] * 2,
+         bal("alice", 10015 - 201 - 201) + "\n" + journal_count("fee", 2)),
+     ["fee", "--account", "bob", "--amount", "999.00"], []),
+    ("exp-07-rename", "rename",
+     "`ledgerctl rename --from bob --to robert` renames an account, preserving its balance, and\nprints exactly `renamed bob to robert`. Renaming a missing account must fail cleanly.",
+     BASE, [], line(["rename", "--from", "bob", "--to", "robert"], "renamed bob to robert",
+                    bal("robert", 2537) + "\n" + gone("bob")),
+     ["rename", "--from", "nobody", "--to", "x"], []),
+    ("exp-08-count", "count",
+     "`ledgerctl count` prints the number of accounts as `accounts <n>` — a ledger of five\naccounts prints exactly `accounts 5`.",
+     BASE, [], line(["count"], "accounts 2"), None, None),
+    ("exp-09-zero", "zero",
+     "`ledgerctl zero --account alice` sets a balance to zero and prints exactly `zeroed alice`.\nRecord a journal entry with `\"type\": \"zero\"` whose `amount` is the balance removed.\nA missing account must fail cleanly.",
+     BASE, [], line(["zero", "--account", "alice"], "zeroed alice",
+                    bal("alice", 0) + "\n" + journal_has("zero")),
+     ["zero", "--account", "nobody"], []),
+    ("exp-10-topup", "topup",
+     f"`ledgerctl topup --account bob --amount {TRAP_029}` credits an account and prints exactly\n`topped up bob by {TRAP_029}`. Record a journal entry with `\"type\": \"topup\"`.\nA missing account must fail cleanly.",
+     BASE, [],
+     seq([(["topup", "--account", "bob", "--amount", TRAP_029], f"topped up bob by {TRAP_029}")] * 2,
+         bal("bob", 2537 + 29 + 29) + "\n" + journal_count("topup", 2)),
+     ["topup", "--account", "nobody", "--amount", "1.00"], []),
 ]
 
 # --------------------------------------------------------------------------
 # EVALUATION POOL — held out. Measured, never learned from.
 #
-# Command names, journal types and output strings here appear nowhere in the
-# experience pool; that disjointness is what the leakage gate scans for.
+# Every money task is decided by the minor-units convention rather than merely
+# checked for it: the amounts do not survive `float`, and the percentages leave
+# a real fraction of a cent to discard.
+#
+# ## Specs show the FORMAT with an example that is not the answer
+#
+# The first attempt at this raised the arithmetic difficulty and simultaneously
+# *lowered* the task difficulty, because each spec stated the exact expected
+# output — and for a computed field that string IS the answer. Telling the agent
+# it must print `collected 7.01 tax from alice` removes any need to work out
+# that 7% of 100.15 floors to 701 minor units. Measured: control went 0.792 ->
+# 0.771 while tasks at a perfect score went 5/12 -> 8/12.
+#
+# So every worked example below uses numbers that are deliberately NOT the
+# seeded case. The format stays pinned exactly — a task should never fail
+# because the agent guessed a separator — while the value has to be computed.
+#
+# `interest` was the accidental control for this: it was the one task whose
+# second value was never stated, and it is the one that kept failing, with the
+# float leaking straight into the output (`credited 500.75 interest to alice`).
 # --------------------------------------------------------------------------
 
 EVALUATION = [
-    (
-        "eval-01-refund",
-        "refund",
-        """
-`ledgerctl refund --account alice --amount 2.50` debits the account and prints
-exactly `refunded 2.50 from alice`. Record a journal entry with
-`"type": "refund"`. Refunding more than the balance must fail cleanly.
-""",
-        BASE,
-        std("refund")
-        + """
-    write_ledger(ws, {"alice": 10000, "bob": 2500})
-    rc, out, err = run_cli(ws, "refund", "--account", "alice", "--amount", "2.50")
-    if rc != 0:
-        raise VerifyFailure(f"refund failed: rc={rc} err={err!r}")
-    if out != "refunded 2.50 from alice":
-        raise VerifyFailure(f"unexpected output: {out!r}")
-    data = load_ledger(ws)
-    if data["accounts"]["alice"] != 9750:
-        raise VerifyFailure(f"alice should be 9750, got {data['accounts']['alice']!r}")
-    if not any(e.get("type") == "refund" for e in data["journal"]):
-        raise VerifyFailure("no journal entry with type 'refund'")
-    assert_minor_units(ws)
-    assert_ledger_error(ws, "refund", "--account", "bob", "--amount", "999.00")
-""",
-    ),
-    (
-        "eval-02-sweep",
-        "sweep",
-        """
-`ledgerctl sweep --from alice --to bob` moves the entire balance of one
-account into another, leaving the source at zero, and prints exactly
-`swept 100.00 from alice to bob`. Record a journal entry with
-`"type": "sweep"`. A missing account must fail cleanly.
-""",
-        BASE,
-        std("sweep")
-        + """
-    write_ledger(ws, {"alice": 10000, "bob": 2500})
-    rc, out, err = run_cli(ws, "sweep", "--from", "alice", "--to", "bob")
-    if rc != 0:
-        raise VerifyFailure(f"sweep failed: rc={rc} err={err!r}")
-    if out != "swept 100.00 from alice to bob":
-        raise VerifyFailure(f"unexpected output: {out!r}")
-    data = load_ledger(ws)
-    if data["accounts"]["alice"] != 0 or data["accounts"]["bob"] != 12500:
-        raise VerifyFailure(f"balances wrong after sweep: {data['accounts']!r}")
-    if not any(e.get("type") == "sweep" for e in data["journal"]):
-        raise VerifyFailure("no journal entry with type 'sweep'")
-    assert_minor_units(ws)
-    assert_ledger_error(ws, "sweep", "--from", "nobody", "--to", "bob")
-""",
-    ),
-    (
-        "eval-03-interest",
-        "interest",
-        """
-`ledgerctl interest --account alice --rate 5` credits 5 percent of the current
-balance and prints exactly `credited 5.00 interest to alice`. Record a journal
-entry with `"type": "interest"`. Any fraction of a cent is discarded (round
-down). A missing account must fail cleanly.
-""",
-        BASE,
-        std("interest")
-        + """
-    write_ledger(ws, {"alice": 10000, "bob": 2500})
-    rc, out, err = run_cli(ws, "interest", "--account", "alice", "--rate", "5")
-    if rc != 0:
-        raise VerifyFailure(f"interest failed: rc={rc} err={err!r}")
-    if out != "credited 5.00 interest to alice":
-        raise VerifyFailure(f"unexpected output: {out!r}")
-    data = load_ledger(ws)
-    if data["accounts"]["alice"] != 10500:
-        raise VerifyFailure(f"alice should be 10500, got {data['accounts']['alice']!r}")
-    if not any(e.get("type") == "interest" for e in data["journal"]):
-        raise VerifyFailure("no journal entry with type 'interest'")
-    assert_minor_units(ws)
-    # Rounding down must not leave a float behind: 3 percent of 2500 is 75.
-    write_ledger(ws, {"alice": 10000, "bob": 2500})
-    rc, out, err = run_cli(ws, "interest", "--account", "bob", "--rate", "3")
-    if rc != 0:
-        raise VerifyFailure(f"interest (rate 3) failed: rc={rc} err={err!r}")
-    data = load_ledger(ws)
-    if data["accounts"]["bob"] != 2575:
-        raise VerifyFailure(f"bob should be 2575, got {data['accounts']['bob']!r}")
-    assert_minor_units(ws)
-    assert_ledger_error(ws, "interest", "--account", "nobody", "--rate", "5")
-""",
-    ),
-    (
-        "eval-04-split",
-        "split",
-        """
-`ledgerctl split --from alice --to bob,carol --amount 10.01` debits the source
-once and divides the amount as evenly as possible across the comma-separated
-destination accounts, giving any leftover minor units to the first
-destination. It prints exactly `split 10.01 from alice across 2 accounts`.
-Record one journal entry with `"type": "split"`. A missing account must fail
-cleanly.
-""",
-        {"accounts": {"alice": 10000, "bob": 2500, "carol": 0}, "journal": []},
-        std("split")
-        + """
-    write_ledger(ws, {"alice": 10000, "bob": 2500, "carol": 0})
-    rc, out, err = run_cli(ws, "split", "--from", "alice", "--to", "bob,carol", "--amount", "10.01")
-    if rc != 0:
-        raise VerifyFailure(f"split failed: rc={rc} err={err!r}")
-    if out != "split 10.01 from alice across 2 accounts":
-        raise VerifyFailure(f"unexpected output: {out!r}")
-    data = load_ledger(ws)
-    got = data["accounts"]
-    # 1001 minor units across two accounts: 501 to the first, 500 to the second.
-    if got["alice"] != 8999 or got["bob"] != 3001 or got["carol"] != 500:
-        raise VerifyFailure(f"split distribution wrong: {got!r}")
-    if not any(e.get("type") == "split" for e in data["journal"]):
-        raise VerifyFailure("no journal entry with type 'split'")
-    assert_minor_units(ws)
-    assert_ledger_error(ws, "split", "--from", "alice", "--to", "nobody", "--amount", "1.00")
-""",
-    ),
-    (
-        "eval-05-statement",
-        "statement",
-        """
-`ledgerctl statement --account alice` prints the account's balance and how
-many journal entries mention it, as exactly `alice 100.00 (2 entries)` for a
-ledger where two entries reference alice. An entry mentions an account if any
-of its values equals the account name. A missing account must fail cleanly.
-""",
-        BASE,
-        std("statement")
-        + """
-    journal = [
-        {"type": "deposit", "account": "alice", "amount": 100},
-        {"type": "transfer", "from": "alice", "to": "bob", "amount": 50},
-        {"type": "deposit", "account": "bob", "amount": 25},
-    ]
-    write_ledger(ws, {"alice": 10000, "bob": 2500}, journal)
-    rc, out, err = run_cli(ws, "statement", "--account", "alice")
-    if rc != 0:
-        raise VerifyFailure(f"statement failed: rc={rc} err={err!r}")
-    if out != "alice 100.00 (2 entries)":
-        raise VerifyFailure(f"unexpected output: {out!r}")
-    assert_minor_units(ws)
-    assert_ledger_error(ws, "statement", "--account", "nobody")
-""",
-    ),
-    (
-        "eval-06-merge",
-        "merge",
-        """
-`ledgerctl merge --from bob --to alice` moves the source account's whole
-balance into the destination, removes the source account, and prints exactly
-`merged bob into alice`. Record a journal entry with `"type": "merge"`.
-Merging a missing account, or an account into itself, must fail cleanly.
-""",
-        BASE,
-        std("merge")
-        + """
-    write_ledger(ws, {"alice": 10000, "bob": 2500})
-    rc, out, err = run_cli(ws, "merge", "--from", "bob", "--to", "alice")
-    if rc != 0:
-        raise VerifyFailure(f"merge failed: rc={rc} err={err!r}")
-    if out != "merged bob into alice":
-        raise VerifyFailure(f"unexpected output: {out!r}")
-    data = load_ledger(ws)
-    if data["accounts"].get("alice") != 12500 or "bob" in data["accounts"]:
-        raise VerifyFailure(f"merge left the wrong state: {data['accounts']!r}")
-    if not any(e.get("type") == "merge" for e in data["journal"]):
-        raise VerifyFailure("no journal entry with type 'merge'")
-    assert_minor_units(ws)
-    assert_ledger_error(ws, "merge", "--from", "nobody", "--to", "alice")
-""",
-    ),
+    ("eval-01-refund", "refund",
+     f"`ledgerctl refund --account alice --amount {TRAP_115}` debits the account and prints exactly\n`refunded {TRAP_115} from alice`. Record a journal entry with `\"type\": \"refund\"`.\nRefunding more than the balance must fail cleanly.",
+     BASE, [],
+     seq([(["refund", "--account", "alice", "--amount", TRAP_115], f"refunded {TRAP_115} from alice")] * 2,
+         bal("alice", 10015 - 115 - 115) + "\n" + journal_count("refund", 2)),
+     ["refund", "--account", "bob", "--amount", "999.00"], []),
+    ("eval-02-sweep", "sweep",
+     "`ledgerctl sweep --from alice --to bob` moves the entire balance of one account into\nanother, leaving the source at zero. It prints `swept <amount> from <source> to <target>` —\nsweeping a source that holds 3.50 prints exactly `swept 3.50 from alice to bob`.\nRecord a journal entry with `\"type\": \"sweep\"`. A missing account must fail cleanly.",
+     BASE, [], line(["sweep", "--from", "alice", "--to", "bob"], f"swept {fmt(10015)} from alice to bob",
+                    bal("alice", 0) + "\n" + bal("bob", 12552) + "\n" + journal_has("sweep")),
+     ["sweep", "--from", "nobody", "--to", "bob"], []),
+    ("eval-03-interest", "interest",
+     "`ledgerctl interest --account alice --rate 5` credits 5 percent of the current balance.\nIt prints `credited <amount> interest to <account>` — crediting 2.00 prints exactly\n`credited 2.00 interest to alice`. Any fraction of a cent is discarded (round down), and\ninterest compounds: a second call charges the rate against the new balance.\nRecord a journal entry with `\"type\": \"interest\"`. A missing account must fail cleanly.",
+     BASE, [],
+     seq([(["interest", "--account", "alice", "--rate", "5"], f"credited {fmt(500)} interest to alice"),
+          (["interest", "--account", "alice", "--rate", "5"], f"credited {fmt(525)} interest to alice")],
+         bal("alice", 10015 + 500 + 525) + "\n" + journal_count("interest", 2)),
+     ["interest", "--account", "nobody", "--rate", "5"], []),
+    ("eval-04-split", "split",
+     f"`ledgerctl split --from alice --to bob,carol --amount {TRAP_201}` debits the source once and\ndivides the amount as evenly as possible across the comma-separated destinations, giving any\nleftover minor units to the first. It prints exactly `split {TRAP_201} from alice across 2 accounts`.\nRecord one journal entry with `\"type\": \"split\"`. A missing account must fail cleanly.",
+     {"alice": 10015, "bob": 2537, "carol": 0}, [],
+     line(["split", "--from", "alice", "--to", "bob,carol", "--amount", TRAP_201],
+          f"split {TRAP_201} from alice across 2 accounts",
+          bal("alice", 10015 - 201) + "\n" + bal("bob", 2537 + 101) + "\n" + bal("carol", 100) + "\n" + journal_has("split")),
+     ["split", "--from", "alice", "--to", "nobody", "--amount", "1.00"], []),
+    ("eval-05-statement", "statement",
+     "`ledgerctl statement --account alice` prints the balance and how many journal entries\nmention it, as `<account> <balance> (<n> entries)` — an account holding 3.50 named in 4\nentries prints exactly `alice 3.50 (4 entries)`. An entry mentions an account if any of its\nvalues equals the account name. A missing account must fail cleanly.",
+     BASE, [{"type": "deposit", "account": "alice", "amount": 1015},
+            {"type": "transfer", "from": "alice", "to": "bob", "amount": 50},
+            {"type": "deposit", "account": "bob", "amount": 25}],
+     line(["statement", "--account", "alice"], f"alice {fmt(10015)} (2 entries)"),
+     ["statement", "--account", "nobody"], []),
+    ("eval-06-merge", "merge",
+     "`ledgerctl merge --from bob --to alice` moves the source's whole balance into the\ndestination, removes the source, and prints exactly `merged bob into alice`.\nRecord a journal entry with `\"type\": \"merge\"`. Merging a missing account, or an account\ninto itself, must fail cleanly.",
+     BASE, [], line(["merge", "--from", "bob", "--to", "alice"], "merged bob into alice",
+                    bal("alice", 12552) + "\n" + gone("bob") + "\n" + journal_has("merge")),
+     ["merge", "--from", "nobody", "--to", "alice"], []),
+    ("eval-07-tax", "tax",
+     "`ledgerctl tax --account alice --rate 7` debits 7 percent of the balance as tax.\nIt prints `collected <amount> tax from <account>` — collecting 2.00 prints exactly\n`collected 2.00 tax from alice`. Any fraction of a cent is discarded (round down), and a\nsecond call taxes the reduced balance. Record a journal entry with `\"type\": \"tax\"`.\nA missing account must fail cleanly.",
+     BASE, [],
+     seq([(["tax", "--account", "alice", "--rate", "7"], f"collected {fmt(701)} tax from alice"),
+          (["tax", "--account", "alice", "--rate", "7"], f"collected {fmt(651)} tax from alice")],
+         bal("alice", 10015 - 701 - 651) + "\n" + journal_count("tax", 2)),
+     ["tax", "--account", "nobody", "--rate", "7"], []),
+    ("eval-08-installments", "installments",
+     f"`ledgerctl installments --account bob --amount {TRAP_230} --count 3` divides the amount into\nthat many parts as evenly as possible in minor units, giving any remainder to the FIRST\ninstallment. It prints `<count> installments of <a>, <b>, ...` — dividing 1.01 into 2 prints\nexactly `2 installments of 0.51, 0.50`. It changes no balance.\nA count of zero must fail cleanly.",
+     BASE, [], line(["installments", "--account", "bob", "--amount", TRAP_230, "--count", "3"],
+                    f"3 installments of {fmt(78)}, {fmt(76)}, {fmt(76)}", bal("bob", 2537)),
+     ["installments", "--account", "bob", "--amount", TRAP_230, "--count", "0"], []),
+    ("eval-09-reconcile", "reconcile",
+     "`ledgerctl reconcile` sums every journal entry's `amount` and prints\n`journal <total> across <n> entries` — entries totalling 3.50 across 4 of them print exactly\n`journal 3.50 across 4 entries`. An entry without an `amount` counts toward the entry total\nbut adds nothing to the sum.",
+     BASE, [{"type": "deposit", "account": "alice", "amount": 1015},
+            {"type": "fee", "account": "bob", "amount": 737},
+            {"type": "note", "account": "alice"}],
+     line(["reconcile"], f"journal {fmt(1752)} across 3 entries"), None, None),
+    ("eval-10-cap", "cap",
+     "`ledgerctl cap --account alice --max 50.00` reduces a balance to the cap when it exceeds it\nand records a journal entry with `\"type\": \"cap\"` whose `amount` is the amount removed.\nIt prints `capped <account> at <max>, removed <amount>` — capping a 9.00 balance at 4.00\nprints exactly `capped alice at 4.00, removed 5.00`. A missing account must fail cleanly.",
+     BASE, [], line(["cap", "--account", "alice", "--max", "50.00"], f"capped alice at 50.00, removed {fmt(5015)}",
+                    bal("alice", 5000) + "\n" + journal_has("cap")),
+     ["cap", "--account", "nobody", "--max", "1.00"], []),
+    ("eval-11-share", "share",
+     "`ledgerctl share --account alice` prints the account's share of the total held across ALL\naccounts, as a whole-number percentage rounded down: `<account> holds <p>% of <total>`.\nAn account holding 1.00 of a 4.00 total prints exactly `alice holds 25% of 4.00`.\nA missing account must fail cleanly.",
+     BASE, [], line(["share", "--account", "alice"], f"alice holds {10015 * 100 // 12552}% of {fmt(12552)}"),
+     ["share", "--account", "nobody"], []),
+    ("eval-12-largest", "largest",
+     "`ledgerctl largest` prints the account with the highest balance as `<account> <balance>` —\nfor a top account holding 3.50 that is exactly `bob 3.50`. Ties break alphabetically.",
+     BASE, [], line(["largest"], f"alice {fmt(10015)}"), None, None),
 ]
 
 
 def main() -> None:
-    for tid, name, spec, setup, body in EXPERIENCE:
-        task("experience", tid, name, spec, setup, body)
-    for tid, name, spec, setup, body in EVALUATION:
-        task("evaluation", tid, name, spec, setup, body)
+    for spec in EXPERIENCE:
+        emit("experience", *spec)
+    for spec in EVALUATION:
+        emit("evaluation", *spec)
     print(f"wrote {len(EXPERIENCE)} experience + {len(EVALUATION)} evaluation tasks")
 
 
